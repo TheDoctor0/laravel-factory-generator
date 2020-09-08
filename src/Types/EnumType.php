@@ -1,6 +1,6 @@
 <?php
 
-namespace Mpociot\LaravelTestFactoryHelper\Types;
+namespace TheDoctor0\LaravelFactoryGenerator\Types;
 
 use Doctrine\DBAL\Types\Type;
 use Doctrine\DBAL\Platforms\AbstractPlatform;

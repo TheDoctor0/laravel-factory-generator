@@ -1,6 +1,6 @@
 <?php
 
-namespace Mpociot\LaravelTestFactoryHelper\Console;
+namespace TheDoctor0\LaravelFactoryGenerator\Console;
 
 use Doctrine\DBAL\Types\Type;
 use Illuminate\Console\Command;
@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Mpociot\LaravelTestFactoryHelper\Types\EnumType;
+use TheDoctor0\LaravelFactoryGenerator\Types\EnumType;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;

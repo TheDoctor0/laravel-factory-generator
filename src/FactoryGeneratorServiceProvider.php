@@ -1,11 +1,11 @@
 <?php
 
-namespace Mpociot\LaravelTestFactoryHelper;
+namespace TheDoctor0\LaravelFactoryGenerator;
 
 use Illuminate\Support\ServiceProvider;
-use Mpociot\LaravelTestFactoryHelper\Console\GenerateCommand;
+use TheDoctor0\LaravelFactoryGenerator\Console\GenerateCommand;
 
-class TestFactoryHelperServiceProvider extends ServiceProvider
+class FactoryGeneratorServiceProvider extends ServiceProvider
 {
 
     /**
@@ -49,7 +49,7 @@ class TestFactoryHelperServiceProvider extends ServiceProvider
      */
     public function provides()
     {
-        return array('command.test-factory-helper.generate');
+        return ['command.test-factory-helper.generate'];
     }
 
 }
