@@ -456,7 +456,7 @@ class GenerateFactoryCommand extends Command
     protected function factoryClass(Relation $relation): string
     {
         return $this->isLaravel8OrAbove()
-            ? get_class($relation->getRelated()) . '::factory()'
+            ? '\\' . get_class($relation->getRelated()) . '::factory()'
             : 'factory(' . get_class($relation->getRelated()) . '::class)';
     }
 
