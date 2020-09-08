@@ -430,7 +430,6 @@ class GenerateFactoryCommand extends Command
             'phone_number' => $this->fakerPrefix('phoneNumber'),
             'postcode' => $this->fakerPrefix('postcode'),
             'postal_code' => $this->fakerPrefix('postcode'),
-            'remember_token' => $this->fakerPrefix('regexify(\'[A-Za-z0-9]{10}\')'),
             'slug' => $this->fakerPrefix('slug'),
             'street' => $this->fakerPrefix('streetName'),
             'address1' => $this->fakerPrefix('streetAddress'),
@@ -441,6 +440,7 @@ class GenerateFactoryCommand extends Command
             'username' => $this->fakerPrefix('userName'),
             'uuid' => $this->fakerPrefix('uuid'),
             'zip' => $this->fakerPrefix('postcode'),
+            'remember_token' => 'Str::random(10)',
         ];
 
         return $fakeableNames[$field] ?? null;

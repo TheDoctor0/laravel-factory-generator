@@ -1,6 +1,9 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+@isset($properties['remember_token'])
+use Illuminate\Support\Str;
+@endisset
 use {{ $reflection->getName() }};
 
 class {{ $reflection->getShortName() }}Factory extends Factory
