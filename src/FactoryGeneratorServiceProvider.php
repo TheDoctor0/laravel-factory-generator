@@ -6,7 +6,7 @@ namespace TheDoctor0\LaravelFactoryGenerator;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Contracts\Support\DeferrableProvider;
-use TheDoctor0\LaravelFactoryGenerator\Console\GenerateCommand;
+use TheDoctor0\LaravelFactoryGenerator\Console\GenerateFactoryCommand;
 
 class FactoryGeneratorServiceProvider extends ServiceProvider implements DeferrableProvider
 {
@@ -17,35 +17,14 @@ class FactoryGeneratorServiceProvider extends ServiceProvider implements Deferra
      */
     public function boot(): void
     {
+        if (! $this->app->runningInConsole()) {
+            return;
+        }
+
         $viewPath = __DIR__ . '/../resources/views';
 
-        $this->loadViewsFrom($viewPath, 'test-factory-helper');
+        $this->loadViewsFrom($viewPath, 'factory-generator');
+
+        $this->commands([GenerateFactoryCommand::class]);
     }
-
-    /**
-     * Register the service provider.
-     *
-     * @return void
-     */
-    public function register(): void
-    {
-        $this->app->bind('command.test-factory-helper.generate',
-            function ($app) {
-                return new GenerateCommand($app['files'], $app['view']);
-            }
-        );
-
-        $this->commands('command.test-factory-helper.generate');
-    }
-
-    /**
-     * Get the services provided by the provider.
-     *
-     * @return array
-     */
-    public function provides(): array
-    {
-        return ['command.test-factory-helper.generate'];
-    }
-
 }
