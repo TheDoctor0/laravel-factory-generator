@@ -19,7 +19,7 @@ class EnumMysql extends EnumDriver
             ->select(
                 DB::raw("
                     SHOW COLUMNS FROM `{$this->table}`
-                    WHERE Field = '{$this->field}
+                    WHERE Field = '{$this->field}'
                 ")
             );
 
