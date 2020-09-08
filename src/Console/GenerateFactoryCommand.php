@@ -8,7 +8,6 @@ use Exception;
 use Illuminate\Support\Str;
 use Doctrine\DBAL\Types\Type;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Filesystem\Filesystem;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
@@ -301,6 +300,12 @@ class GenerateFactoryCommand extends Command
             return;
         }
 
+        if ($enumValues = EnumValues::get($model, $name)) {
+            $this->properties[$name] = '$faker->randomElement([\'' . implode("', '", $enumValues) . '\'])';
+
+            return;
+        }
+
         $fakeableNames = [
             'city' => '$faker->city',
             'company' => '$faker->company',
@@ -341,10 +346,7 @@ class GenerateFactoryCommand extends Command
             return;
         }
 
-        $enumValues = EnumValues::get($model, $name);
-
         $fakeableTypes = [
-            'enum' => '$faker->randomElement(' . $enumValues . ')',
             'string' => '$faker->word',
             'text' => '$faker->text',
             'date' => '$faker->date()',
@@ -359,12 +361,6 @@ class GenerateFactoryCommand extends Command
             'float' => '$faker->randomFloat()',
             'boolean' => '$faker->boolean',
         ];
-
-        if ($enumValues !== '[]') {
-            $this->properties[$name] = $fakeableTypes['enum'];
-
-            return;
-        }
 
         if (isset($fakeableTypes[$type])) {
             $this->properties[$name] = $fakeableTypes[$type];
@@ -384,7 +380,7 @@ class GenerateFactoryCommand extends Command
     {
         $reflection = new \ReflectionClass($class);
 
-        $content = $this->view->make('test-factory-helper::factory', [
+        $content = $this->view->make('factory-generator::factory', [
             'reflection' => $reflection,
             'properties' => $this->properties,
         ])->render();

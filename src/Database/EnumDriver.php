@@ -33,7 +33,7 @@ abstract class EnumDriver
     /**
      * Get enum values for model field in database.
      *
-     * @return string|null
+     * @return string|array
      */
-    abstract public function values(): ?string;
+    abstract public function values(): ?array;
 }

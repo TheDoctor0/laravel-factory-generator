@@ -11,9 +11,9 @@ class EnumMysql extends EnumDriver
     /**
      * Get enum values for model field in MySQL database.
      *
-     * @return string|null
+     * @return array|null
      */
-    public function values(): ?string
+    public function values(): ?array
     {
         $type = DB::connection($this->connection)
             ->select(
@@ -23,10 +23,8 @@ class EnumMysql extends EnumDriver
                 ")
             );
 
-        preg_match_all("/'([^']+)'/", $type[0]->Type, $values);
+        preg_match_all("/'([^']+)'/", $type[0]->Type, $matches);
 
-        return isset($values[1])
-            ? "['" . implode("', '", $values) . "']"
-            : null;
+        return $matches[1] ?? null;
     }
 }

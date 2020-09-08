@@ -11,9 +11,9 @@ class EnumPgsql extends EnumDriver
     /**
      * Get enum values for model field in MySQL database.
      *
-     * @return string|null
+     * @return array|null
      */
-    public function values(): ?string
+    public function values(): ?array
     {
         $type = DB::connection($this->connection)
             ->select(
@@ -30,6 +30,6 @@ class EnumPgsql extends EnumDriver
             return null;
         }
 
-        return "['" . collect($type)->map->matches->implode(', ') . "']";
+        return collect($type)->map->matches->toArray();
     }
 }
