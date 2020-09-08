@@ -152,8 +152,6 @@ class GenerateFactoryCommand extends Command
             return null;
         }
 
-        $output = '<?php' . "\n\n";
-
         $this->properties = [];
 
         try {
@@ -168,14 +166,12 @@ class GenerateFactoryCommand extends Command
             $this->getPropertiesFromTable($eloquentModel);
             $this->getPropertiesFromMethods($eloquentModel);
 
-            $output .= $this->createFactory($reflection);
+            return $this->createFactory($reflection);
         } catch (Exception $e) {
             $this->error("Could not analyze class {$model}.\nException: " . $e->getMessage());
-
-            return null;
         }
 
-        return $output;
+        return null;
     }
 
     /**
@@ -339,7 +335,7 @@ class GenerateFactoryCommand extends Command
      */
     protected function createFactory(ReflectionClass $reflection): string
     {
-        return $this->view->make('factory-generator::factory', [
+        return $this->view->make($this->factoryView(), [
             'reflection' => $reflection,
             'properties' => $this->properties,
         ])->render();
@@ -355,6 +351,18 @@ class GenerateFactoryCommand extends Command
         return $this->isLaravel8OrAbove()
             ? 'app' . DIRECTORY_SEPARATOR . 'Models'
             : 'app';
+    }
+
+    /**
+     * Return factory template view.
+     *
+     * @return string
+     */
+    protected function factoryView(): string
+    {
+        return $this->isLaravel8OrAbove()
+            ? 'factory-generator::class-factory'
+            : 'factory-generator::method-factory';
     }
 
     /**
