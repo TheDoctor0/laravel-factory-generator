@@ -15,7 +15,7 @@ It is a forked version of [mpociot/laravel-test-factory-helper](https://github.c
 You can install the package via composer:
 
 ```bash
-thedoctor0/laravel-factory-generator --dev
+composer require thedoctor0/laravel-factory-generator --dev
 ```
 
 ## Usage
