@@ -17,7 +17,6 @@ use Illuminate\Database\Eloquent\Model;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use Symfony\Component\Console\Output\OutputInterface;
 use TheDoctor0\LaravelFactoryGenerator\Database\EnumValues;
 
 class GenerateFactoryCommand extends Command
@@ -34,7 +33,7 @@ class GenerateFactoryCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Generate database test factories for models';
+    protected $description = 'Generate test factories for models';
 
     /**
      * @var string
@@ -55,11 +54,6 @@ class GenerateFactoryCommand extends Command
      * @var \Illuminate\Contracts\View\Factory
      */
     protected $view;
-
-    /**
-     * @var string
-     */
-    protected $existingFactories = '';
 
     /**
      * @var array
@@ -99,16 +93,18 @@ class GenerateFactoryCommand extends Command
                 continue;
             }
 
-            if (! $result = $this->generateFactory($model)) {
+            $content = $this->generateFactory($model);
+
+            if ($content === null) {
+                $this->error('Failed to generate model factory: ' . $filename);
+
                 continue;
             }
 
-            $written = $this->files->put($filename, $result);
-
-            if ($written !== false) {
-                $this->info('Model factory created: ' . $filename);
+            if (! $this->files->put($filename, $content)) {
+                $this->error('Failed to save model factory: ' . $filename);
             } else {
-                $this->error('Failed to create model factory: ' . $filename);
+                $this->info('Model factory created: ' . $filename);
             }
         }
     }
@@ -138,45 +134,38 @@ class GenerateFactoryCommand extends Command
         ];
     }
 
-    protected function generateFactory($model)
+    /**
+     * @param string $model
+     *
+     * @return false|string
+     */
+    protected function generateFactory(string $model)
     {
-        $output = '<?php' . "\n\n";
-
-        $this->properties = [];
-
         if (! class_exists($model)) {
-            if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
-                $this->error("Unable to find '$model' class");
-            }
+            $this->error("Unable to find {$model} class!");
 
             return false;
         }
 
+        $output = '<?php' . "\n\n";
+
+        $this->properties = [];
+
         try {
-            // handle abstract classes, interfaces, ...
             $reflection = new ReflectionClass($model);
 
-            if (! $reflection->isSubclassOf(Model::class)) {
+            if (! $reflection->isSubclassOf(Model::class) || ! $reflection->IsInstantiable()) {
                 return false;
             }
 
-            if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
-                $this->comment("Loading model '$model'");
-            }
+            $eloquentModel = $this->laravel->make($model);
 
-            if (! $reflection->IsInstantiable()) {
-                // ignore abstract class or interface
-                return false;
-            }
-
-            $model = $this->laravel->make($model);
-
-            $this->getPropertiesFromTable($model);
-            $this->getPropertiesFromMethods($model);
+            $this->getPropertiesFromTable($eloquentModel);
+            $this->getPropertiesFromMethods($eloquentModel);
 
             $output .= $this->createFactory($reflection);
         } catch (Exception $e) {
-            $this->error("Exception: " . $e->getMessage() . "\nCould not analyze class $model.");
+            $this->error("Could not analyze class {$model}.\nException: " . $e->getMessage());
 
             return false;
         }
@@ -185,12 +174,14 @@ class GenerateFactoryCommand extends Command
     }
 
     /**
+     * Load models from defined list or directory.
+     *
      * @param array $models
      *
      * @return array|string[]|\string[][]
      * @noinspection PhpUndefinedMethodInspection
      */
-    protected function loadModels($models = []): array
+    protected function loadModels(array $models = []): array
     {
         if (! empty($models)) {
             return array_map(function ($name) {
@@ -206,9 +197,9 @@ class GenerateFactoryCommand extends Command
             }, $models);
         }
 
-        $dir = $this->laravel->basePath($this->dir);
+        if (! file_exists($this->laravel->basePath($this->dir))) {
+            $this->error('Model directory does not exists.');
 
-        if (! file_exists($dir)) {
             return [];
         }
 
@@ -228,15 +219,12 @@ class GenerateFactoryCommand extends Command
      */
     protected function getPropertiesFromTable(Model $model): void
     {
-        $table = $model->getConnection()->getTablePrefix() . $model->getTable();
-        $schema = $model->getConnection()->getDoctrineSchemaManager();
-
-        $database = null;
-        if (strpos($table, '.')) {
-            [$database, $table] = explode('.', $table);
-        }
-
-        $columns = $schema->listTableColumns($table, $database);
+        $table = $model->getTable();
+        $database = $model->getConnection()
+            ->getTablePrefix();
+        $columns = $model->getConnection()
+            ->getDoctrineSchemaManager()
+            ->listTableColumns($table, $database);
 
         if (! $columns) {
             return;
@@ -250,19 +238,16 @@ class GenerateFactoryCommand extends Command
             } else {
                 $type = $column->getType()->getName();
             }
-            if ($field !== $model::CREATED_AT
-                && $field !== $model::UPDATED_AT
-                && ! ($model->incrementing && $model->getKeyName() === $field)
-            ) {
-                if (! method_exists($model, 'getDeletedAtColumn') || (method_exists($model,
-                            'getDeletedAtColumn') && $field !== $model->getDeletedAtColumn())) {
-                    $this->setProperty($model, $field, $type);
-                }
+
+            if ($this->isFieldFakeable($field, $model)) {
+                $this->setProperty($model, $field, $type);
             }
         }
     }
 
     /**
+     * Load properties from model methods.
+     *
      * @param \Illuminate\Database\Eloquent\Model $model
      *
      * @throws \ReflectionException
@@ -272,53 +257,114 @@ class GenerateFactoryCommand extends Command
         $methods = get_class_methods($model);
 
         foreach ($methods as $method) {
-            if (! Str::startsWith($method, 'get') && ! method_exists(Model::class, $method)) {
-                // Use reflection to inspect the code, based on Illuminate/Support/SerializableClosure.php
-                $reflection = new ReflectionMethod($model, $method);
-                $file = new SplFileObject($reflection->getFileName());
-                $file->seek($reflection->getStartLine() - 1);
-                $code = '';
-                while ($file->key() < $reflection->getEndLine()) {
-                    $code .= $file->current();
-                    $file->next();
-                }
-                $code = trim(preg_replace('/\s\s+/', '', $code));
-                $begin = strpos($code, 'function(');
-                $code = substr($code, $begin, strrpos($code, '}') - $begin + 1);
-                foreach (['belongsTo'] as $relation) {
-                    $search = '$this->' . $relation . '(';
-                    if ($pos = stripos($code, $search)) {
-                        $relationObj = $model->$method();
-                        if ($relationObj instanceof Relation) {
-                            /** @var \Illuminate\Database\Eloquent\Relations\Relation $relationObj */
-                            $this->setProperty($model, $relationObj->getForeignKeyName(),
-                                'factory(' . get_class($relationObj->getRelated()) . '::class)');
-                        }
-                    }
-                }
+            if (Str::startsWith($method, 'get') || method_exists(Model::class, $method)) {
+                continue;
+            }
+
+            $reflection = new ReflectionMethod($model, $method);
+
+            $file = new SplFileObject($reflection->getFileName());
+            $file->seek($reflection->getStartLine() - 1);
+
+            $code = '';
+
+            while ($file->key() < $reflection->getEndLine()) {
+                $code .= $file->current();
+                $file->next();
+            }
+
+            $code = trim(preg_replace('/\s\s+/', '', $code));
+            $begin = strpos($code, 'function(');
+            $code = substr($code, $begin, strrpos($code, '}') - $begin + 1);
+
+            $search = '$this->belongsTo(';
+
+            if (! stripos($code, $search)) {
+                continue;
+            }
+
+            /** @var \Illuminate\Database\Eloquent\Relations\BelongsTo $relationObject */
+            $relationObject = $model->$method();
+
+            if ($relationObject instanceof Relation) {
+                $this->properties[$relationObject->getForeignKeyName()] = $this->factoryClass($relationObject);
             }
         }
     }
 
     /**
-     * @param             $model
-     * @param string      $name
-     * @param string|null $type
+     * @param \Illuminate\Database\Eloquent\Model $model
+     * @param string                              $field
+     * @param string                              $type
      */
-    protected function setProperty(Model $model, string $name, $type = null): void
+    protected function setProperty(Model $model, string $field, string $type): void
     {
-        if ($type !== null && Str::startsWith($type, 'factory(')) {
-            $this->properties[$name] = $type;
+        if ($enumValues = EnumValues::get($model, $field)) {
+            $this->properties[$field] = '$faker->randomElement([\'' . implode("', '", $enumValues) . '\'])';
 
             return;
         }
 
-        if ($enumValues = EnumValues::get($model, $name)) {
-            $this->properties[$name] = '$faker->randomElement([\'' . implode("', '", $enumValues) . '\'])';
+        if ($property = $this->mapByName($field)) {
+            $this->properties[$field] = $property;
 
             return;
         }
 
+        if ($property = $this->mapByType($type)) {
+            $this->properties[$field] = $property;
+
+            return;
+        }
+
+        $this->properties[$field] = '$faker->word';
+    }
+
+    /**
+     * @param \ReflectionClass $reflection
+     *
+     * @return string
+     */
+    protected function createFactory(ReflectionClass $reflection): string
+    {
+        return $this->view->make('factory-generator::factory', [
+            'reflection' => $reflection,
+            'properties' => $this->properties,
+        ])->render();
+    }
+
+    /**
+     * Return default models directory.
+     *
+     * @return string
+     */
+    protected function defaultModelsDir(): string
+    {
+        return $this->isLaravel8OrAbove()
+            ? 'app' . DIRECTORY_SEPARATOR . 'Models'
+            : 'app';
+    }
+
+    /**
+     * @param string                              $field
+     * @param \Illuminate\Database\Eloquent\Model $model
+     *
+     * @return bool
+     */
+    protected function isFieldFakeable(string $field, Model $model): bool
+    {
+        return ! ($model->incrementing && $field === $model->getKeyName())
+            && ! ($model->timestamps && ($field === $model::CREATED_AT || $field === $model::UPDATED_AT))
+            && ! (method_exists($model, 'getDeletedAtColumn') && $field === $model->getDeletedAtColumn());
+    }
+
+    /**
+     * Map Faker usage based on field name.
+     *
+     * @return string|null
+     */
+    protected function mapByName(string $field): ?string
+    {
         $fakeableNames = [
             'city' => '$faker->city',
             'company' => '$faker->company',
@@ -353,12 +399,16 @@ class GenerateFactoryCommand extends Command
             'zip' => '$faker->postcode',
         ];
 
-        if (isset($fakeableNames[$name])) {
-            $this->properties[$name] = $fakeableNames[$name];
+        return $fakeableNames[$field] ?? null;
+    }
 
-            return;
-        }
-
+    /**
+     * Map Faker usage based on field type.
+     *
+     * @return string|null
+     */
+    protected function mapByType(string $field): ?string
+    {
         $fakeableTypes = [
             'string' => '$faker->word',
             'text' => '$faker->text',
@@ -375,38 +425,19 @@ class GenerateFactoryCommand extends Command
             'boolean' => '$faker->boolean',
         ];
 
-        if (isset($fakeableTypes[$type])) {
-            $this->properties[$name] = $fakeableTypes[$type];
-
-            return;
-        }
-
-        $this->properties[$name] = '$faker->word';
+        return $fakeableTypes[$field] ?? null;
     }
 
     /**
-     * @param \ReflectionClass $reflection
+     * @param \Illuminate\Database\Eloquent\Relations\Relation $relation
      *
      * @return string
      */
-    protected function createFactory(ReflectionClass $reflection): string
-    {
-        return $this->view->make('factory-generator::factory', [
-            'reflection' => $reflection,
-            'properties' => $this->properties,
-        ])->render();
-    }
-
-    /**
-     * Return default models directory.
-     *
-     * @return string
-     */
-    protected function defaultModelsDir(): string
+    protected function factoryClass(Relation $relation): string
     {
         return $this->isLaravel8OrAbove()
-            ? 'app' . DIRECTORY_SEPARATOR . 'Models'
-            : 'app';
+            ? get_class($relation->getRelated()) . '::factory()'
+            : 'factory(' . get_class($relation->getRelated()) . '::class)';
     }
 
     /**
