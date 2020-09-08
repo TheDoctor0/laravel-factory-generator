@@ -10,13 +10,16 @@ use SplFileObject;
 use ReflectionClass;
 use ReflectionMethod;
 use Illuminate\Support\Str;
+use Doctrine\DBAL\Types\Type;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Database\Eloquent\Model;
+use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use TheDoctor0\LaravelFactoryGenerator\Types\EnumType;
 use TheDoctor0\LaravelFactoryGenerator\Database\EnumValues;
 
 class GenerateFactoryCommand extends Command
@@ -63,6 +66,8 @@ class GenerateFactoryCommand extends Command
     /**
      * @param Filesystem $files
      * @param            $view
+     *
+     * @throws \Doctrine\DBAL\DBALException
      */
     public function __construct(Filesystem $files, Factory $view)
     {
@@ -70,6 +75,8 @@ class GenerateFactoryCommand extends Command
 
         $this->files = $files;
         $this->view = $view;
+
+        Type::addType('enum', EnumType::class);
     }
 
     /**
@@ -95,9 +102,7 @@ class GenerateFactoryCommand extends Command
 
             $content = $this->generateFactory($model);
 
-            if ($content === null) {
-                $this->error('Failed to generate model factory: ' . $filename);
-
+            if (! $content) {
                 continue;
             }
 
@@ -137,14 +142,14 @@ class GenerateFactoryCommand extends Command
     /**
      * @param string $model
      *
-     * @return false|string
+     * @return string|null
      */
-    protected function generateFactory(string $model)
+    protected function generateFactory(string $model): ?string
     {
         if (! class_exists($model)) {
             $this->error("Unable to find {$model} class!");
 
-            return false;
+            return null;
         }
 
         $output = '<?php' . "\n\n";
@@ -155,7 +160,7 @@ class GenerateFactoryCommand extends Command
             $reflection = new ReflectionClass($model);
 
             if (! $reflection->isSubclassOf(Model::class) || ! $reflection->IsInstantiable()) {
-                return false;
+                return null;
             }
 
             $eloquentModel = $this->laravel->make($model);
@@ -167,7 +172,7 @@ class GenerateFactoryCommand extends Command
         } catch (Exception $e) {
             $this->error("Could not analyze class {$model}.\nException: " . $e->getMessage());
 
-            return false;
+            return null;
         }
 
         return $output;
@@ -216,15 +221,22 @@ class GenerateFactoryCommand extends Command
      * Load the properties from the database table.
      *
      * @param \Illuminate\Database\Eloquent\Model $model
+     *
+     * @throws \Doctrine\DBAL\DBALException
      */
     protected function getPropertiesFromTable(Model $model): void
     {
-        $table = $model->getTable();
-        $database = $model->getConnection()
-            ->getTablePrefix();
-        $columns = $model->getConnection()
-            ->getDoctrineSchemaManager()
-            ->listTableColumns($table, $database);
+        $table = $model->getConnection()->getTablePrefix() . $model->getTable();
+        $schema = $model->getConnection()->getDoctrineSchemaManager();
+        $database = null;
+
+        if (strpos($table, '.')) {
+            [$database, $table] = explode('.', $table);
+        }
+
+        $this->registerCustomTypes($schema);
+
+        $columns = $schema->listTableColumns($table, $database);
 
         if (! $columns) {
             return;
@@ -438,6 +450,29 @@ class GenerateFactoryCommand extends Command
         return $this->isLaravel8OrAbove()
             ? get_class($relation->getRelated()) . '::factory()'
             : 'factory(' . get_class($relation->getRelated()) . '::class)';
+    }
+
+    /**
+     * @param \Doctrine\DBAL\Schema\AbstractSchemaManager $schema
+     *
+     * @return void
+     * @throws \Doctrine\DBAL\DBALException
+     */
+    protected function registerCustomTypes(AbstractSchemaManager $schema): void
+    {
+        $platform = $schema->getDatabasePlatform();
+
+        if (! $platform) {
+            return;
+        }
+
+        $platform->registerDoctrineTypeMapping('enum', 'enum');
+        $platformName = $platform->getName();
+        $customTypes = $this->laravel['config']->get("ide-helper.custom_db_types.{$platformName}", []);
+
+        foreach ($customTypes as $typeName => $doctrineTypeName) {
+            $platform->registerDoctrineTypeMapping($typeName, $doctrineTypeName);
+        }
     }
 
     /**
