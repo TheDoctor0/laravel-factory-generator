@@ -286,8 +286,8 @@ class GenerateFactoryCommand extends Command
             }
 
             $code = trim(preg_replace('/\s\s+/', '', $code));
-            $begin = strpos($code, 'function(');
-            $code = substr($code, $begin, strrpos($code, '}') - $begin + 1);
+            $start = strpos($code, 'function ');
+            $code = substr($code, $start, strrpos($code, '}') - $start + 1);
 
             $search = '$this->belongsTo(';
 
