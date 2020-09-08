@@ -19,11 +19,6 @@ use TheDoctor0\LaravelFactoryGenerator\Database\EnumValues;
 class GenerateFactoryCommand extends Command
 {
     /**
-     * @var Filesystem $files
-     */
-    protected $files;
-
-    /**
      * The console command name.
      *
      * @var string
@@ -80,7 +75,7 @@ class GenerateFactoryCommand extends Command
     public function handle(): void
     {
         Type::addType('customEnum', EnumType::class);
-        $this->dir = $this->option('dir');
+        $this->dir = $this->option('dir') ?? $this->defaultModelsDir();
         $this->force = $this->option('force');
 
         $models = $this->loadModels($this->argument('model'));
@@ -388,4 +383,25 @@ class GenerateFactoryCommand extends Command
         return $content;
     }
 
+    /**
+     * Return default models directory.
+     *
+     * @return string
+     */
+    protected function defaultModelsDir(): string
+    {
+        return $this->isLaravel8OrAbove()
+            ? 'app' . DIRECTORY_SEPARATOR . 'Models'
+            : 'app';
+    }
+
+    /**
+     * Return if running on Laravel 8+.
+     *
+     * @return bool
+     */
+    protected function isLaravel8OrAbove(): bool
+    {
+        return (int) $this->laravel->version()[0] >= 8;
+    }
 }
