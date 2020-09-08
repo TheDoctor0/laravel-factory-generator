@@ -11,9 +11,9 @@ use ReflectionClass;
 use ReflectionMethod;
 use Illuminate\Support\Str;
 use Illuminate\Console\Command;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Contracts\Filesystem\Filesystem;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -47,7 +47,7 @@ class GenerateFactoryCommand extends Command
     protected $force;
 
     /**
-     * @var \Illuminate\Contracts\Filesystem\Filesystem $files
+     * @var \Illuminate\Filesystem\Filesystem
      */
     protected $files;
 
@@ -99,13 +99,12 @@ class GenerateFactoryCommand extends Command
                 continue;
             }
 
-            $result = $this->generateFactory($model);
-
-            if ($result === false) {
+            if (! $result = $this->generateFactory($model)) {
                 continue;
             }
 
             $written = $this->files->put($filename, $result);
+
             if ($written !== false) {
                 $this->info('Model factory created: ' . $filename);
             } else {
@@ -178,12 +177,20 @@ class GenerateFactoryCommand extends Command
             $output .= $this->createFactory($model);
         } catch (Exception $e) {
             $this->error("Exception: " . $e->getMessage() . "\nCould not analyze class $model.");
+
+            return false;
         }
 
         return $output;
     }
 
-    protected function loadModels($models = [])
+    /**
+     * @param array $models
+     *
+     * @return array|string[]|\string[][]
+     * @noinspection PhpUndefinedMethodInspection
+     */
+    protected function loadModels($models = []): array
     {
         if (! empty($models)) {
             return array_map(function ($name) {
@@ -192,7 +199,7 @@ class GenerateFactoryCommand extends Command
                 }
 
                 return str_replace(
-                    [DIRECTORY_SEPARATOR, basename($this->laravel->basePath()) . '\\'],
+                    [DIRECTORY_SEPARATOR, basename($this->laravel->path()) . '\\'],
                     ['\\', $this->laravel->getNamespace()],
                     $this->dir . DIRECTORY_SEPARATOR . $name
                 );
@@ -200,13 +207,14 @@ class GenerateFactoryCommand extends Command
         }
 
         $dir = $this->laravel->basePath($this->dir);
+
         if (! file_exists($dir)) {
             return [];
         }
 
         return array_map(function (SplFIleInfo $file) {
             return str_replace(
-                [DIRECTORY_SEPARATOR, basename($this->laravel->basePath()) . '\\'],
+                [DIRECTORY_SEPARATOR, basename($this->laravel->path()) . '\\'],
                 ['\\', $this->laravel->getNamespace()],
                 $file->getPath() . DIRECTORY_SEPARATOR . basename($file->getFilename(), '.php')
             );
@@ -217,7 +225,6 @@ class GenerateFactoryCommand extends Command
      * Load the properties from the database table.
      *
      * @param \Illuminate\Database\Eloquent\Model $model
-     *
      */
     protected function getPropertiesFromTable(Model $model): void
     {
