@@ -1,7 +1,3 @@
-<?php
-
-declare(strict_types=1);
-
 use Faker\Generator as Faker;
 
 /* @var $factory \Illuminate\Database\Eloquent\Factory */

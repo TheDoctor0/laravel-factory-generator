@@ -166,7 +166,7 @@ class GenerateFactoryCommand extends Command
             $this->getPropertiesFromTable($eloquentModel);
             $this->getPropertiesFromMethods($eloquentModel);
 
-            return $this->createFactory($reflection);
+            return '<?php' . "\n\n" . $this->createFactory($reflection);
         } catch (Exception $e) {
             $this->error("Could not analyze class {$model}.\nException: " . $e->getMessage());
         }
