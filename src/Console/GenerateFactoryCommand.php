@@ -154,9 +154,9 @@ class GenerateFactoryCommand extends Command
 
         try {
             // handle abstract classes, interfaces, ...
-            $reflectionClass = new ReflectionClass($model);
+            $reflection = new ReflectionClass($model);
 
-            if (! $reflectionClass->isSubclassOf(Model::class)) {
+            if (! $reflection->isSubclassOf(Model::class)) {
                 return false;
             }
 
@@ -164,7 +164,7 @@ class GenerateFactoryCommand extends Command
                 $this->comment("Loading model '$model'");
             }
 
-            if (! $reflectionClass->IsInstantiable()) {
+            if (! $reflection->IsInstantiable()) {
                 // ignore abstract class or interface
                 return false;
             }
@@ -174,7 +174,7 @@ class GenerateFactoryCommand extends Command
             $this->getPropertiesFromTable($model);
             $this->getPropertiesFromMethods($model);
 
-            $output .= $this->createFactory($model);
+            $output .= $this->createFactory($reflection);
         } catch (Exception $e) {
             $this->error("Exception: " . $e->getMessage() . "\nCould not analyze class $model.");
 
@@ -385,15 +385,12 @@ class GenerateFactoryCommand extends Command
     }
 
     /**
-     * @param string $class
+     * @param \ReflectionClass $reflection
      *
      * @return string
-     * @throws \ReflectionException
      */
-    protected function createFactory(string $class): string
+    protected function createFactory(ReflectionClass $reflection): string
     {
-        $reflection = new ReflectionClass($class);
-
         return $this->view->make('factory-generator::factory', [
             'reflection' => $reflection,
             'properties' => $this->properties,
