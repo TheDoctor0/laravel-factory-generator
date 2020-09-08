@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace TheDoctor0\LaravelFactoryGenerator;
 
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Contracts\Support\DeferrableProvider;
 use TheDoctor0\LaravelFactoryGenerator\Console\GenerateFactoryCommand;
 
-class FactoryGeneratorServiceProvider extends ServiceProvider implements DeferrableProvider
+class FactoryGeneratorServiceProvider extends ServiceProvider
 {
     /**
      * Bootstrap the application events.
