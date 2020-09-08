@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace TheDoctor0\LaravelFactoryGenerator\Console;
 
 use Exception;
+use SplFIleInfo;
+use SplFileObject;
+use ReflectionClass;
+use ReflectionMethod;
 use Illuminate\Support\Str;
-use Doctrine\DBAL\Types\Type;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Database\Eloquent\Model;
@@ -79,11 +82,9 @@ class GenerateFactoryCommand extends Command
      * Execute the console command.
      *
      * @return void
-     * @throws \Doctrine\DBAL\DBALException
      */
     public function handle(): void
     {
-        Type::addType('customEnum', EnumType::class);
         $this->dir = $this->option('dir') ?? $this->defaultModelsDir();
         $this->force = $this->option('force');
 
@@ -154,7 +155,7 @@ class GenerateFactoryCommand extends Command
 
         try {
             // handle abstract classes, interfaces, ...
-            $reflectionClass = new \ReflectionClass($model);
+            $reflectionClass = new ReflectionClass($model);
 
             if (! $reflectionClass->isSubclassOf(Model::class)) {
                 return false;
@@ -191,21 +192,21 @@ class GenerateFactoryCommand extends Command
                 }
 
                 return str_replace(
-                    [DIRECTORY_SEPARATOR, basename($this->laravel->path()) . '\\'],
+                    [DIRECTORY_SEPARATOR, basename($this->laravel->basePath()) . '\\'],
                     ['\\', $this->laravel->getNamespace()],
                     $this->dir . DIRECTORY_SEPARATOR . $name
                 );
             }, $models);
         }
 
-        $dir = base_path($this->dir);
+        $dir = $this->laravel->basePath($this->dir);
         if (! file_exists($dir)) {
             return [];
         }
 
-        return array_map(function (\SplFIleInfo $file) {
+        return array_map(function (SplFIleInfo $file) {
             return str_replace(
-                [DIRECTORY_SEPARATOR, basename($this->laravel->path()) . '\\'],
+                [DIRECTORY_SEPARATOR, basename($this->laravel->basePath()) . '\\'],
                 ['\\', $this->laravel->getNamespace()],
                 $file->getPath() . DIRECTORY_SEPARATOR . basename($file->getFilename(), '.php')
             );
@@ -217,20 +218,11 @@ class GenerateFactoryCommand extends Command
      *
      * @param \Illuminate\Database\Eloquent\Model $model
      *
-     * @throws \Doctrine\DBAL\DBALException
      */
     protected function getPropertiesFromTable(Model $model): void
     {
         $table = $model->getConnection()->getTablePrefix() . $model->getTable();
-        $schema = $model->getConnection()->getDoctrineSchemaManager($table);
-        $databasePlatform = $schema->getDatabasePlatform();
-        $databasePlatform->registerDoctrineTypeMapping('enum', 'customEnum');
-
-        $platformName = $databasePlatform->getName();
-        $customTypes = $this->laravel['config']->get("ide-helper.custom_db_types.{$platformName}", []);
-        foreach ($customTypes as $yourTypeName => $doctrineTypeName) {
-            $databasePlatform->registerDoctrineTypeMapping($yourTypeName, $doctrineTypeName);
-        }
+        $schema = $model->getConnection()->getDoctrineSchemaManager();
 
         $database = null;
         if (strpos($table, '.')) {
@@ -251,9 +243,9 @@ class GenerateFactoryCommand extends Command
             } else {
                 $type = $column->getType()->getName();
             }
-            if (! ($model->incrementing && $model->getKeyName() === $field) &&
-                $field !== $model::CREATED_AT &&
-                $field !== $model::UPDATED_AT
+            if ($field !== $model::CREATED_AT
+                && $field !== $model::UPDATED_AT
+                && ! ($model->incrementing && $model->getKeyName() === $field)
             ) {
                 if (! method_exists($model, 'getDeletedAtColumn') || (method_exists($model,
                             'getDeletedAtColumn') && $field !== $model->getDeletedAtColumn())) {
@@ -275,8 +267,8 @@ class GenerateFactoryCommand extends Command
         foreach ($methods as $method) {
             if (! Str::startsWith($method, 'get') && ! method_exists(Model::class, $method)) {
                 // Use reflection to inspect the code, based on Illuminate/Support/SerializableClosure.php
-                $reflection = new \ReflectionMethod($model, $method);
-                $file = new \SplFileObject($reflection->getFileName());
+                $reflection = new ReflectionMethod($model, $method);
+                $file = new SplFileObject($reflection->getFileName());
                 $file->seek($reflection->getStartLine() - 1);
                 $code = '';
                 while ($file->key() < $reflection->getEndLine()) {
@@ -393,7 +385,7 @@ class GenerateFactoryCommand extends Command
      */
     protected function createFactory(string $class): string
     {
-        $reflection = new \ReflectionClass($class);
+        $reflection = new ReflectionClass($class);
 
         return $this->view->make('factory-generator::factory', [
             'reflection' => $reflection,
