@@ -191,8 +191,8 @@ class GenerateFactoryCommand extends Command
                 }
 
                 return str_replace(
-                    [DIRECTORY_SEPARATOR, basename($this->laravel->path()) . '\\'],
-                    ['\\', $this->laravel->getNamespace()],
+                    ['/', DIRECTORY_SEPARATOR, basename($this->laravel->path()) . '\\'],
+                    ['\\', '\\', $this->laravel->getNamespace()],
                     $this->dir . DIRECTORY_SEPARATOR . $name
                 );
             }, $models);
@@ -206,8 +206,8 @@ class GenerateFactoryCommand extends Command
 
         return array_map(function (SplFIleInfo $file) {
             return str_replace(
-                [DIRECTORY_SEPARATOR, basename($this->laravel->path()) . '\\'],
-                ['\\', $this->laravel->getNamespace()],
+                ['/', DIRECTORY_SEPARATOR, basename($this->laravel->path()) . '\\'],
+                ['\\', '\\', $this->laravel->getNamespace()],
                 $file->getPath() . DIRECTORY_SEPARATOR . basename($file->getFilename(), '.php')
             );
         }, $this->files->allFiles($this->dir));
