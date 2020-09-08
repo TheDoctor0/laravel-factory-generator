@@ -366,6 +366,30 @@ class GenerateFactoryCommand extends Command
     }
 
     /**
+     * @param \Illuminate\Database\Eloquent\Relations\Relation $relation
+     *
+     * @return string
+     */
+    protected function factoryClass(Relation $relation): string
+    {
+        return $this->isLaravel8OrAbove()
+            ? '\\' . get_class($relation->getRelated()) . '::factory()'
+            : 'factory(' . get_class($relation->getRelated()) . '::class)';
+    }
+
+    /**
+     * @param string $type
+     *
+     * @return string
+     */
+    protected function fakerPrefix(string $type): string
+    {
+        return $this->isLaravel8OrAbove()
+            ? '$this->faker->' . $type
+            : '$faker->' . $type;
+    }
+
+    /**
      * @param string                              $field
      * @param \Illuminate\Database\Eloquent\Model $model
      *
@@ -386,37 +410,37 @@ class GenerateFactoryCommand extends Command
     protected function mapByName(string $field): ?string
     {
         $fakeableNames = [
-            'city' => '$faker->city',
-            'company' => '$faker->company',
-            'country' => '$faker->country',
-            'description' => '$faker->text',
-            'email' => '$faker->safeEmail',
-            'first_name' => '$faker->firstName',
-            'firstname' => '$faker->firstName',
-            'guid' => '$faker->uuid',
-            'last_name' => '$faker->lastName',
-            'lastname' => '$faker->lastName',
-            'lat' => '$faker->latitude',
-            'latitude' => '$faker->latitude',
-            'lng' => '$faker->longitude',
-            'longitude' => '$faker->longitude',
-            'name' => '$faker->name',
-            'password' => 'bcrypt($faker->password)',
-            'phone' => '$faker->phoneNumber',
-            'phone_number' => '$faker->phoneNumber',
-            'postcode' => '$faker->postcode',
-            'postal_code' => '$faker->postcode',
-            'remember_token' => '$faker->regexify(\'[A-Za-z0-9]{10}\')',
-            'slug' => '$faker->slug',
-            'street' => '$faker->streetName',
-            'address1' => '$faker->streetAddress',
-            'address2' => '$faker->secondaryAddress',
-            'summary' => '$faker->text',
-            'url' => '$faker->url',
-            'user_name' => '$faker->userName',
-            'username' => '$faker->userName',
-            'uuid' => '$faker->uuid',
-            'zip' => '$faker->postcode',
+            'city' => $this->fakerPrefix('city'),
+            'company' => $this->fakerPrefix('company'),
+            'country' => $this->fakerPrefix('country'),
+            'description' => $this->fakerPrefix('text'),
+            'email' => $this->fakerPrefix('safeEmail'),
+            'first_name' => $this->fakerPrefix('firstName'),
+            'firstname' => $this->fakerPrefix('firstName'),
+            'guid' => $this->fakerPrefix('uuid'),
+            'last_name' => $this->fakerPrefix('lastName'),
+            'lastname' => $this->fakerPrefix('lastName'),
+            'lat' => $this->fakerPrefix('latitude'),
+            'latitude' => $this->fakerPrefix('latitude'),
+            'lng' => $this->fakerPrefix('longitude'),
+            'longitude' => $this->fakerPrefix('longitude'),
+            'name' => $this->fakerPrefix('name'),
+            'password' => 'bcrypt(' . $this->fakerPrefix('password') . ')',
+            'phone' => $this->fakerPrefix('phoneNumber'),
+            'phone_number' => $this->fakerPrefix('phoneNumber'),
+            'postcode' => $this->fakerPrefix('postcode'),
+            'postal_code' => $this->fakerPrefix('postcode'),
+            'remember_token' => $this->fakerPrefix('regexify(\'[A-Za-z0-9]{10}\')'),
+            'slug' => $this->fakerPrefix('slug'),
+            'street' => $this->fakerPrefix('streetName'),
+            'address1' => $this->fakerPrefix('streetAddress'),
+            'address2' => $this->fakerPrefix('secondaryAddress'),
+            'summary' => $this->fakerPrefix('text'),
+            'url' => $this->fakerPrefix('url'),
+            'user_name' => $this->fakerPrefix('userName'),
+            'username' => $this->fakerPrefix('userName'),
+            'uuid' => $this->fakerPrefix('uuid'),
+            'zip' => $this->fakerPrefix('postcode'),
         ];
 
         return $fakeableNames[$field] ?? null;
@@ -430,34 +454,22 @@ class GenerateFactoryCommand extends Command
     protected function mapByType(string $field): ?string
     {
         $fakeableTypes = [
-            'string' => '$faker->word',
-            'text' => '$faker->text',
-            'date' => '$faker->date()',
-            'time' => '$faker->time()',
-            'guid' => '$faker->word',
-            'datetimetz' => '$faker->dateTime()',
-            'datetime' => '$faker->dateTime()',
-            'integer' => '$faker->randomNumber()',
-            'bigint' => '$faker->randomNumber()',
-            'smallint' => '$faker->randomNumber()',
-            'decimal' => '$faker->randomFloat()',
-            'float' => '$faker->randomFloat()',
-            'boolean' => '$faker->boolean',
+            'string' => $this->fakerPrefix('word'),
+            'text' => $this->fakerPrefix('text'),
+            'date' => $this->fakerPrefix('date()'),
+            'time' => $this->fakerPrefix('time()'),
+            'guid' => $this->fakerPrefix('word'),
+            'datetimetz' => $this->fakerPrefix('dateTime()'),
+            'datetime' => $this->fakerPrefix('dateTime()'),
+            'integer' => $this->fakerPrefix('randomNumber()'),
+            'bigint' => $this->fakerPrefix('randomNumber()'),
+            'smallint' => $this->fakerPrefix('randomNumber()'),
+            'decimal' => $this->fakerPrefix('randomFloat()'),
+            'float' => $this->fakerPrefix('randomFloat()'),
+            'boolean' => $this->fakerPrefix('boolean'),
         ];
 
         return $fakeableTypes[$field] ?? null;
-    }
-
-    /**
-     * @param \Illuminate\Database\Eloquent\Relations\Relation $relation
-     *
-     * @return string
-     */
-    protected function factoryClass(Relation $relation): string
-    {
-        return $this->isLaravel8OrAbove()
-            ? '\\' . get_class($relation->getRelated()) . '::factory()'
-            : 'factory(' . get_class($relation->getRelated()) . '::class)';
     }
 
     /**
