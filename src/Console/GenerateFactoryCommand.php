@@ -8,13 +8,13 @@ use Exception;
 use Illuminate\Support\Str;
 use Doctrine\DBAL\Types\Type;
 use Illuminate\Console\Command;
-use Illuminate\Filesystem\Filesystem;
+use Illuminate\Contracts\View\Factory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Symfony\Component\Console\Output\OutputInterface;
-use TheDoctor0\LaravelFactoryGenerator\Types\EnumType;
 use TheDoctor0\LaravelFactoryGenerator\Database\EnumValues;
 
 class GenerateFactoryCommand extends Command
@@ -39,12 +39,12 @@ class GenerateFactoryCommand extends Command
     protected $dir;
 
     /**
-     * @var
+     * @var bool
      */
     protected $force;
 
     /**
-     * @var Filesystem $files
+     * @var \Illuminate\Contracts\Filesystem\Filesystem $files
      */
     protected $files;
 
@@ -67,7 +67,7 @@ class GenerateFactoryCommand extends Command
      * @param Filesystem $files
      * @param            $view
      */
-    public function __construct(Filesystem $files, $view)
+    public function __construct(Filesystem $files, Factory $view)
     {
         parent::__construct();
 
