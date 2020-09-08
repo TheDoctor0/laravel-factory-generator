@@ -1,18 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TheDoctor0\LaravelFactoryGenerator\Console;
 
+use Exception;
+use Illuminate\Support\Str;
 use Doctrine\DBAL\Types\Type;
 use Illuminate\Console\Command;
-use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-use TheDoctor0\LaravelFactoryGenerator\Types\EnumType;
-use Symfony\Component\Console\Input\InputArgument;
+use Illuminate\Filesystem\Filesystem;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Input\InputArgument;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Symfony\Component\Console\Output\OutputInterface;
-
+use TheDoctor0\LaravelFactoryGenerator\Types\EnumType;
 
 class GenerateCommand extends Command
 {
@@ -51,7 +53,7 @@ class GenerateCommand extends Command
     /**
      * @var array
      */
-    protected $properties = array();
+    protected $properties = [];
 
     /**
      * @var
@@ -60,10 +62,12 @@ class GenerateCommand extends Command
 
     /**
      * @param Filesystem $files
+     * @param            $view
      */
     public function __construct(Filesystem $files, $view)
     {
         parent::__construct();
+
         $this->files = $files;
         $this->view = $view;
     }
@@ -73,7 +77,7 @@ class GenerateCommand extends Command
      *
      * @return void
      */
-    public function handle()
+    public function handle(): void
     {
         Type::addType('customEnum', EnumType::class);
         $this->dir = $this->option('dir');
@@ -84,7 +88,7 @@ class GenerateCommand extends Command
         foreach ($models as $model) {
             $filename = 'database/factories/' . class_basename($model) . 'Factory.php';
 
-            if ($this->files->exists($filename) && !$this->force) {
+            if (! $this->force && $this->files->exists($filename)) {
                 $this->line('<fg=yellow>Model factory exists, use --force to overwrite:</fg=yellow> ' . $filename);
 
                 continue;
@@ -98,24 +102,63 @@ class GenerateCommand extends Command
 
             $written = $this->files->put($filename, $result);
             if ($written !== false) {
-                $this->line('<info>Model factory created:</info> ' . $filename);
+                $this->info('Model factory created: ' . $filename);
             } else {
-                $this->line('<error>Failed to create model factory:</error> ' . $filename);
+                $this->error('Failed to create model factory: ' . $filename);
             }
         }
     }
 
+    public function enumValues($model, $table, $name): string
+    {
+        if ($table === null) {
+            return "[]";
+        }
+
+        $driver = $model->getConnection()->getDriverName();
+        $values = null;
+
+        if ($driver === 'mysql') {
+            $type = DB::connection($model->getConnectionName())
+                ->select(DB::raw('SHOW COLUMNS FROM ' . $table . ' WHERE Field = "' . $name . '"'))[0]->Type;
+
+            preg_match_all("/'([^']+)'/", $type, $matches);
+
+            $values = isset($matches[1]) ? $matches[1] : null;
+        } elseif ($driver === 'pgsql') {
+            $types = DB::connection($model->getConnectionName())
+                ->select(DB::raw("
+                    select matches[1]
+                    from pg_constraint, regexp_matches(pg_get_constraintdef(\"oid\"), '''(.+?)''', 'g') matches
+                    where contype = 'c'
+                        and conname = '{$table}_{$name}_check'
+                        and conrelid = 'public.{$table}'::regclass;
+                "));
+
+            if (count($types)) {
+                $values = [];
+
+                foreach ($types as $type) {
+                    $values[] = $type->matches;
+                }
+            }
+        }
+
+        return $values
+            ? "['" . implode("', '", $values) . "']"
+            : "[]";
+    }
 
     /**
      * Get the console command arguments.
      *
      * @return array
      */
-    protected function getArguments()
+    protected function getArguments(): array
     {
-        return array(
-            array('model', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'Which models to include', array()),
-        );
+        return [
+            ['model', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'Which models to include', []],
+        ];
     }
 
     /**
@@ -123,7 +166,7 @@ class GenerateCommand extends Command
      *
      * @return array
      */
-    protected function getOptions()
+    protected function getOptions(): array
     {
         return [
             ['dir', 'D', InputOption::VALUE_OPTIONAL, 'The model directory', $this->dir],
@@ -136,10 +179,11 @@ class GenerateCommand extends Command
         $output = '<?php' . "\n\n";
 
         $this->properties = [];
-        if (!class_exists($model)) {
+        if (! class_exists($model)) {
             if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
                 $this->error("Unable to find '$model' class");
             }
+
             return false;
         }
 
@@ -147,7 +191,7 @@ class GenerateCommand extends Command
             // handle abstract classes, interfaces, ...
             $reflectionClass = new \ReflectionClass($model);
 
-            if (!$reflectionClass->isSubclassOf('Illuminate\Database\Eloquent\Model')) {
+            if (! $reflectionClass->isSubclassOf('Illuminate\Database\Eloquent\Model')) {
                 return false;
             }
 
@@ -155,7 +199,7 @@ class GenerateCommand extends Command
                 $this->comment("Loading model '$model'");
             }
 
-            if (!$reflectionClass->IsInstantiable()) {
+            if (! $reflectionClass->IsInstantiable()) {
                 // ignore abstract class or interface
                 return false;
             }
@@ -166,17 +210,16 @@ class GenerateCommand extends Command
             $this->getPropertiesFromMethods($model);
 
             $output .= $this->createFactory($model);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->error("Exception: " . $e->getMessage() . "\nCould not analyze class $model.");
         }
 
         return $output;
     }
 
-
     protected function loadModels($models = [])
     {
-        if (!empty($models)) {
+        if (! empty($models)) {
             return array_map(function ($name) {
                 if (strpos($name, '\\') !== false) {
                     return $name;
@@ -190,9 +233,8 @@ class GenerateCommand extends Command
             }, $models);
         }
 
-
         $dir = base_path($this->dir);
-        if (!file_exists($dir)) {
+        if (! file_exists($dir)) {
             return [];
         }
 
@@ -210,7 +252,7 @@ class GenerateCommand extends Command
      *
      * @param \Illuminate\Database\Eloquent\Model $model
      */
-    protected function getPropertiesFromTable($model)
+    protected function getPropertiesFromTable($model): void
     {
         $table = $model->getConnection()->getTablePrefix() . $model->getTable();
         $schema = $model->getConnection()->getDoctrineSchemaManager($table);
@@ -218,14 +260,14 @@ class GenerateCommand extends Command
         $databasePlatform->registerDoctrineTypeMapping('enum', 'customEnum');
 
         $platformName = $databasePlatform->getName();
-        $customTypes = $this->laravel['config']->get("ide-helper.custom_db_types.{$platformName}", array());
+        $customTypes = $this->laravel['config']->get("ide-helper.custom_db_types.{$platformName}", []);
         foreach ($customTypes as $yourTypeName => $doctrineTypeName) {
             $databasePlatform->registerDoctrineTypeMapping($yourTypeName, $doctrineTypeName);
         }
 
         $database = null;
         if (strpos($table, '.')) {
-            list($database, $table) = explode('.', $table);
+            [$database, $table] = explode('.', $table);
         }
 
         $columns = $schema->listTableColumns($table, $database);
@@ -238,11 +280,12 @@ class GenerateCommand extends Command
                 } else {
                     $type = $column->getType()->getName();
                 }
-                if (!($model->incrementing && $model->getKeyName() === $name) &&
+                if (! ($model->incrementing && $model->getKeyName() === $name) &&
                     $name !== $model::CREATED_AT &&
                     $name !== $model::UPDATED_AT
                 ) {
-                    if (!method_exists($model, 'getDeletedAtColumn') || (method_exists($model, 'getDeletedAtColumn') && $name !== $model->getDeletedAtColumn())) {
+                    if (! method_exists($model, 'getDeletedAtColumn') || (method_exists($model,
+                                'getDeletedAtColumn') && $name !== $model->getDeletedAtColumn())) {
                         $this->setProperty($model, $name, $type, $table);
                     }
                 }
@@ -250,16 +293,15 @@ class GenerateCommand extends Command
         }
     }
 
-
     /**
      * @param \Illuminate\Database\Eloquent\Model $model
      */
-    protected function getPropertiesFromMethods($model)
+    protected function getPropertiesFromMethods($model): void
     {
         $methods = get_class_methods($model);
 
         foreach ($methods as $method) {
-            if (!Str::startsWith($method, 'get') && !method_exists('Illuminate\Database\Eloquent\Model', $method)) {
+            if (! Str::startsWith($method, 'get') && ! method_exists('Illuminate\Database\Eloquent\Model', $method)) {
                 // Use reflection to inspect the code, based on Illuminate/Support/SerializableClosure.php
                 $reflection = new \ReflectionMethod($model, $method);
                 $file = new \SplFileObject($reflection->getFileName());
@@ -277,7 +319,8 @@ class GenerateCommand extends Command
                     if ($pos = stripos($code, $search)) {
                         $relationObj = $model->$method();
                         if ($relationObj instanceof Relation) {
-                            $this->setProperty($model, $relationObj->getForeignKeyName(), 'factory(' . get_class($relationObj->getRelated()) . '::class)');
+                            $this->setProperty($model, $relationObj->getForeignKeyName(),
+                                'factory(' . get_class($relationObj->getRelated()) . '::class)');
                         }
                     }
                 }
@@ -286,10 +329,10 @@ class GenerateCommand extends Command
     }
 
     /**
-     * @param string $name
+     * @param string      $name
      * @param string|null $type
      */
-    protected function setProperty($model, $name, $type = null, $table = null)
+    protected function setProperty($model, $name, $type = null, $table = null): void
     {
         if ($type !== null && Str::startsWith($type, 'factory(')) {
             $this->properties[$name] = $type;
@@ -353,7 +396,7 @@ class GenerateCommand extends Command
             'smallint' => '$faker->randomNumber()',
             'decimal' => '$faker->randomFloat()',
             'float' => '$faker->randomFloat()',
-            'boolean' => '$faker->boolean'
+            'boolean' => '$faker->boolean',
         ];
 
         if ($enumValues !== '[]') {
@@ -371,52 +414,12 @@ class GenerateCommand extends Command
         $this->properties[$name] = '$faker->word';
     }
 
-    public function enumValues($model, $table, $name)
-    {
-        if ($table === null) {
-            return "[]";
-        }
-
-        $driver = $model->getConnection()->getDriverName();
-        $values = null;
-
-        if ($driver === 'mysql') {
-            $type = DB::connection($model->getConnectionName())
-                ->select(DB::raw('SHOW COLUMNS FROM ' . $table . ' WHERE Field = "' . $name . '"'))[0]->Type;
-
-            preg_match_all("/'([^']+)'/", $type, $matches);
-
-            $values = isset($matches[1]) ? $matches[1] : null;
-        } else if ($driver === 'pgsql') {
-            $types = DB::connection($model->getConnectionName())
-                ->select(DB::raw("
-                    select matches[1]
-                    from pg_constraint, regexp_matches(pg_get_constraintdef(\"oid\"), '''(.+?)''', 'g') matches
-                    where contype = 'c'
-                        and conname = '{$table}_{$name}_check'
-                        and conrelid = 'public.{$table}'::regclass;
-                "));
-
-            if (count($types)) {
-                $values = array();
-
-                foreach ($types as $type){
-                    $values[] = $type->matches;
-                }
-            }
-        }
-
-        return $values
-            ? "['" . implode("', '", $values) . "']"
-            : "[]";
-    }
-
-
     /**
      * @param string $class
+     *
      * @return string
      */
-    protected function createFactory($class)
+    protected function createFactory($class): string
     {
         $reflection = new \ReflectionClass($class);
 

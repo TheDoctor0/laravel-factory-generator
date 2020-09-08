@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TheDoctor0\LaravelFactoryGenerator;
 
 use Illuminate\Support\ServiceProvider;
@@ -7,7 +9,6 @@ use TheDoctor0\LaravelFactoryGenerator\Console\GenerateCommand;
 
 class FactoryGeneratorServiceProvider extends ServiceProvider
 {
-
     /**
      * Indicates if loading of the provider is deferred.
      *
@@ -20,9 +21,10 @@ class FactoryGeneratorServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function boot(): void
     {
-        $viewPath = __DIR__.'/../resources/views';
+        $viewPath = __DIR__ . '/../resources/views';
+
         $this->loadViewsFrom($viewPath, 'test-factory-helper');
     }
 
@@ -31,7 +33,7 @@ class FactoryGeneratorServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function register()
+    public function register(): void
     {
         $this->app->bind('command.test-factory-helper.generate',
             function ($app) {
@@ -47,7 +49,7 @@ class FactoryGeneratorServiceProvider extends ServiceProvider
      *
      * @return array
      */
-    public function provides()
+    public function provides(): array
     {
         return ['command.test-factory-helper.generate'];
     }
