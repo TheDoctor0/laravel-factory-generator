@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use Doctrine\DBAL\Types\Type;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Database\Eloquent\Model;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -23,15 +24,7 @@ class GenerateFactoryCommand extends Command
      *
      * @var string
      */
-    protected $name = 'generate:model-factory';
-
-    /**
-     * @var string
-     */
-    protected $dir = 'app';
-
-    /** @var \Illuminate\Contracts\View\Factory */
-    protected $view;
+    protected $name = 'generate:factory';
 
     /**
      * The console command description.
@@ -43,17 +36,32 @@ class GenerateFactoryCommand extends Command
     /**
      * @var string
      */
+    protected $dir;
+
+    /**
+     * @var
+     */
+    protected $force;
+
+    /**
+     * @var Filesystem $files
+     */
+    protected $files;
+
+    /**
+     * @var \Illuminate\Contracts\View\Factory
+     */
+    protected $view;
+
+    /**
+     * @var string
+     */
     protected $existingFactories = '';
 
     /**
      * @var array
      */
     protected $properties = [];
-
-    /**
-     * @var
-     */
-    protected $force;
 
     /**
      * @param Filesystem $files
@@ -71,6 +79,7 @@ class GenerateFactoryCommand extends Command
      * Execute the console command.
      *
      * @return void
+     * @throws \Doctrine\DBAL\DBALException
      */
     public function handle(): void
     {
@@ -84,7 +93,7 @@ class GenerateFactoryCommand extends Command
             $filename = 'database/factories/' . class_basename($model) . 'Factory.php';
 
             if (! $this->force && $this->files->exists($filename)) {
-                $this->line('<fg=yellow>Model factory exists, use --force to overwrite:</fg=yellow> ' . $filename);
+                $this->warn('Model factory exists, use --force to overwrite: ' . $filename);
 
                 continue;
             }
@@ -134,6 +143,7 @@ class GenerateFactoryCommand extends Command
         $output = '<?php' . "\n\n";
 
         $this->properties = [];
+
         if (! class_exists($model)) {
             if ($this->output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
                 $this->error("Unable to find '$model' class");
@@ -146,7 +156,7 @@ class GenerateFactoryCommand extends Command
             // handle abstract classes, interfaces, ...
             $reflectionClass = new \ReflectionClass($model);
 
-            if (! $reflectionClass->isSubclassOf('Illuminate\Database\Eloquent\Model')) {
+            if (! $reflectionClass->isSubclassOf(Model::class)) {
                 return false;
             }
 
@@ -206,8 +216,10 @@ class GenerateFactoryCommand extends Command
      * Load the properties from the database table.
      *
      * @param \Illuminate\Database\Eloquent\Model $model
+     *
+     * @throws \Doctrine\DBAL\DBALException
      */
-    protected function getPropertiesFromTable($model): void
+    protected function getPropertiesFromTable(Model $model): void
     {
         $table = $model->getConnection()->getTablePrefix() . $model->getTable();
         $schema = $model->getConnection()->getDoctrineSchemaManager($table);
@@ -227,22 +239,25 @@ class GenerateFactoryCommand extends Command
 
         $columns = $schema->listTableColumns($table, $database);
 
-        if ($columns) {
-            foreach ($columns as $column) {
-                $name = $column->getName();
-                if (in_array($name, $model->getDates())) {
-                    $type = 'datetime';
-                } else {
-                    $type = $column->getType()->getName();
-                }
-                if (! ($model->incrementing && $model->getKeyName() === $name) &&
-                    $name !== $model::CREATED_AT &&
-                    $name !== $model::UPDATED_AT
-                ) {
-                    if (! method_exists($model, 'getDeletedAtColumn') || (method_exists($model,
-                                'getDeletedAtColumn') && $name !== $model->getDeletedAtColumn())) {
-                        $this->setProperty($model, $name, $type, $table);
-                    }
+        if (! $columns) {
+            return;
+        }
+
+        foreach ($columns as $column) {
+            $field = $column->getName();
+
+            if (in_array($field, $model->getDates(), true)) {
+                $type = 'datetime';
+            } else {
+                $type = $column->getType()->getName();
+            }
+            if (! ($model->incrementing && $model->getKeyName() === $field) &&
+                $field !== $model::CREATED_AT &&
+                $field !== $model::UPDATED_AT
+            ) {
+                if (! method_exists($model, 'getDeletedAtColumn') || (method_exists($model,
+                            'getDeletedAtColumn') && $field !== $model->getDeletedAtColumn())) {
+                    $this->setProperty($model, $field, $type);
                 }
             }
         }
@@ -250,13 +265,15 @@ class GenerateFactoryCommand extends Command
 
     /**
      * @param \Illuminate\Database\Eloquent\Model $model
+     *
+     * @throws \ReflectionException
      */
-    protected function getPropertiesFromMethods($model): void
+    protected function getPropertiesFromMethods(Model $model): void
     {
         $methods = get_class_methods($model);
 
         foreach ($methods as $method) {
-            if (! Str::startsWith($method, 'get') && ! method_exists('Illuminate\Database\Eloquent\Model', $method)) {
+            if (! Str::startsWith($method, 'get') && ! method_exists(Model::class, $method)) {
                 // Use reflection to inspect the code, based on Illuminate/Support/SerializableClosure.php
                 $reflection = new \ReflectionMethod($model, $method);
                 $file = new \SplFileObject($reflection->getFileName());
@@ -274,6 +291,7 @@ class GenerateFactoryCommand extends Command
                     if ($pos = stripos($code, $search)) {
                         $relationObj = $model->$method();
                         if ($relationObj instanceof Relation) {
+                            /** @var \Illuminate\Database\Eloquent\Relations\Relation $relationObj */
                             $this->setProperty($model, $relationObj->getForeignKeyName(),
                                 'factory(' . get_class($relationObj->getRelated()) . '::class)');
                         }
@@ -284,10 +302,11 @@ class GenerateFactoryCommand extends Command
     }
 
     /**
+     * @param             $model
      * @param string      $name
      * @param string|null $type
      */
-    protected function setProperty($model, $name, $type = null, $table = null): void
+    protected function setProperty(Model $model, string $name, $type = null): void
     {
         if ($type !== null && Str::startsWith($type, 'factory(')) {
             $this->properties[$name] = $type;
@@ -370,17 +389,16 @@ class GenerateFactoryCommand extends Command
      * @param string $class
      *
      * @return string
+     * @throws \ReflectionException
      */
-    protected function createFactory($class): string
+    protected function createFactory(string $class): string
     {
         $reflection = new \ReflectionClass($class);
 
-        $content = $this->view->make('factory-generator::factory', [
+        return $this->view->make('factory-generator::factory', [
             'reflection' => $reflection,
             'properties' => $this->properties,
         ])->render();
-
-        return $content;
     }
 
     /**
