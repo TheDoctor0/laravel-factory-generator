@@ -1,7 +1,9 @@
 The MIT License (MIT)
 
 Copyright (c) 2020 Dawid Janik
+
 Copyright (c) 2019 - 2020 Jason McCreary
+
 Copyright (c) 2016 - 2019 Marcel Pociot
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
