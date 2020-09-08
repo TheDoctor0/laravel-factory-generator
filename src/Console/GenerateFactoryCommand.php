@@ -15,8 +15,9 @@ use Symfony\Component\Console\Input\InputArgument;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Symfony\Component\Console\Output\OutputInterface;
 use TheDoctor0\LaravelFactoryGenerator\Types\EnumType;
+use TheDoctor0\LaravelFactoryGenerator\Database\EnumValues;
 
-class GenerateCommand extends Command
+class GenerateFactoryCommand extends Command
 {
     /**
      * @var Filesystem $files
@@ -107,46 +108,6 @@ class GenerateCommand extends Command
                 $this->error('Failed to create model factory: ' . $filename);
             }
         }
-    }
-
-    public function enumValues($model, $table, $name): string
-    {
-        if ($table === null) {
-            return "[]";
-        }
-
-        $driver = $model->getConnection()->getDriverName();
-        $values = null;
-
-        if ($driver === 'mysql') {
-            $type = DB::connection($model->getConnectionName())
-                ->select(DB::raw('SHOW COLUMNS FROM ' . $table . ' WHERE Field = "' . $name . '"'))[0]->Type;
-
-            preg_match_all("/'([^']+)'/", $type, $matches);
-
-            $values = isset($matches[1]) ? $matches[1] : null;
-        } elseif ($driver === 'pgsql') {
-            $types = DB::connection($model->getConnectionName())
-                ->select(DB::raw("
-                    select matches[1]
-                    from pg_constraint, regexp_matches(pg_get_constraintdef(\"oid\"), '''(.+?)''', 'g') matches
-                    where contype = 'c'
-                        and conname = '{$table}_{$name}_check'
-                        and conrelid = 'public.{$table}'::regclass;
-                "));
-
-            if (count($types)) {
-                $values = [];
-
-                foreach ($types as $type) {
-                    $values[] = $type->matches;
-                }
-            }
-        }
-
-        return $values
-            ? "['" . implode("', '", $values) . "']"
-            : "[]";
     }
 
     /**
@@ -380,7 +341,7 @@ class GenerateCommand extends Command
             return;
         }
 
-        $enumValues = $this->enumValues($model, $table, $name);
+        $enumValues = EnumValues::get($model, $name);
 
         $fakeableTypes = [
             'enum' => '$faker->randomElement(' . $enumValues . ')',
