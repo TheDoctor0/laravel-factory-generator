@@ -1,16 +1,16 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use {{ $reflection->name }};
+use {{ $reflection->getName() }};
 
-class {{ class_basename($reflection->name) }}Factory extends Factory
+class {{ $reflection->getShortName() }}Factory extends Factory
 {
     /**
     * The name of the factory's corresponding model.
     *
     * @var string
     */
-    protected $model = {{ class_basename($reflection->name) }}::class;
+    protected $model = {{ $reflection->getShortName() }}::class;
 
     /**
     * Define the model's default state.
