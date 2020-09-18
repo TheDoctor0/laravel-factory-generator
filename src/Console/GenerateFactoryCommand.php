@@ -76,7 +76,7 @@ class GenerateFactoryCommand extends Command
         $this->files = $files;
         $this->view = $view;
 
-        Type::addType('enum', EnumType::class);
+        Type::addType('customEnum', EnumType::class);
     }
 
     /**
@@ -486,7 +486,7 @@ class GenerateFactoryCommand extends Command
             return;
         }
 
-        $platform->registerDoctrineTypeMapping('enum', 'enum');
+        $platform->registerDoctrineTypeMapping('enum', 'customEnum');
         $platformName = $platform->getName();
         $customTypes = $this->laravel['config']->get("ide-helper.custom_db_types.{$platformName}", []);
 
