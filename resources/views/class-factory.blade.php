@@ -20,7 +20,7 @@ class {{ $reflection->getShortName() }}Factory extends Factory
     *
     * @return array
     */
-    public function definition()
+    public function definition(): array
     {
         return [
 @foreach($properties as $name => $property)
