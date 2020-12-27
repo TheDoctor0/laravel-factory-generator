@@ -64,8 +64,8 @@ class GenerateFactoryCommand extends Command
     protected $properties = [];
 
     /**
-     * @param Filesystem $files
-     * @param            $view
+     * @param \Illuminate\Filesystem\Filesystem $files
+     * @param \Illuminate\Contracts\View\Factory $view
      *
      * @throws \Doctrine\DBAL\DBALException
      */
@@ -308,7 +308,9 @@ class GenerateFactoryCommand extends Command
     protected function setProperty(Model $model, string $field, string $type): void
     {
         if ($enumValues = EnumValues::get($model, $field)) {
-            $this->properties[$field] = '$faker->randomElement([\'' . implode("', '", $enumValues) . '\'])';
+            $this->properties[$field] = $this->fakerPrefix(
+                'randomElement([\'' . implode("', '", $enumValues) . '\'])'
+            );
 
             return;
         }
@@ -325,7 +327,7 @@ class GenerateFactoryCommand extends Command
             return;
         }
 
-        $this->properties[$field] = '$faker->word';
+        $this->properties[$field] = $this->mapByType('string');
     }
 
     /**
