@@ -30,10 +30,5 @@ abstract class EnumDriver
         $this->field = $field;
     }
 
-    /**
-     * Get enum values for model field in database.
-     *
-     * @return string|array
-     */
     abstract public function values(): ?array;
 }

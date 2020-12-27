@@ -25,15 +25,11 @@ use TheDoctor0\LaravelFactoryGenerator\Database\EnumValues;
 class GenerateFactoryCommand extends Command
 {
     /**
-     * The console command name.
-     *
      * @var string
      */
     protected $name = 'generate:factory';
 
     /**
-     * The console command description.
-     *
      * @var string
      */
     protected $description = 'Generate test factories for models';
@@ -64,9 +60,6 @@ class GenerateFactoryCommand extends Command
     protected $properties = [];
 
     /**
-     * @param \Illuminate\Filesystem\Filesystem $files
-     * @param \Illuminate\Contracts\View\Factory $view
-     *
      * @throws \Doctrine\DBAL\DBALException
      */
     public function __construct(Filesystem $files, Factory $view)
@@ -81,11 +74,6 @@ class GenerateFactoryCommand extends Command
         }
     }
 
-    /**
-     * Execute the console command.
-     *
-     * @return void
-     */
     public function handle(): void
     {
         $this->dir = $this->option('dir') ?? $this->defaultModelsDir();
@@ -94,10 +82,11 @@ class GenerateFactoryCommand extends Command
         $models = $this->loadModels($this->argument('model'));
 
         foreach ($models as $model) {
-            $filename = 'database/factories/' . class_basename($model) . 'Factory.php';
+            $class = class_basename($model);
+            $filename = "database/factories/{$class}Factory.php";
 
             if (! $this->force && $this->files->exists($filename)) {
-                $this->warn('Model factory exists, use --force to overwrite: ' . $filename);
+                $this->warn("Model factory exists, use --force to overwrite: {$filename}");
 
                 continue;
             }
@@ -109,18 +98,13 @@ class GenerateFactoryCommand extends Command
             }
 
             if (! $this->files->put($filename, $content)) {
-                $this->error('Failed to save model factory: ' . $filename);
+                $this->error("Failed to save model factory: {$filename}");
             } else {
-                $this->info('Model factory created: ' . $filename);
+                $this->info("Model factory created: {$filename}");
             }
         }
     }
 
-    /**
-     * Get the console command arguments.
-     *
-     * @return array
-     */
     protected function getArguments(): array
     {
         return [
@@ -128,11 +112,6 @@ class GenerateFactoryCommand extends Command
         ];
     }
 
-    /**
-     * Get the console command options.
-     *
-     * @return array
-     */
     protected function getOptions(): array
     {
         return [
@@ -141,11 +120,6 @@ class GenerateFactoryCommand extends Command
         ];
     }
 
-    /**
-     * @param string $model
-     *
-     * @return string|null
-     */
     protected function generateFactory(string $model): ?string
     {
         if (! class_exists($model)) {
@@ -168,34 +142,31 @@ class GenerateFactoryCommand extends Command
             $this->getPropertiesFromTable($eloquentModel);
             $this->getPropertiesFromMethods($eloquentModel);
 
-            return '<?php' . "\n\n" . $this->createFactory($reflection);
+            return "<?php\n\n{$this->createFactory($reflection)}";
         } catch (Exception $e) {
-            $this->error("Could not analyze class {$model}.\nException: " . $e->getMessage());
+            $this->error("Could not analyze class {$model}.\nException: {$e->getMessage()}");
         }
 
         return null;
     }
 
     /**
-     * Load models from defined list or directory.
-     *
-     * @param array $models
-     *
-     * @return array|string[]|\string[][]
      * @noinspection PhpUndefinedMethodInspection
      */
     protected function loadModels(array $models = []): array
     {
+        $rootDirectory = basename($this->laravel->path());
+
         if (! empty($models)) {
-            return array_map(function ($name) {
-                if (strpos($name, '\\') !== false) {
+            return array_map(function ($name) use ($rootDirectory) {
+                if (Str::contains($name, '\\')) {
                     return $name;
                 }
 
                 return str_replace(
-                    ['/', DIRECTORY_SEPARATOR, basename($this->laravel->path()) . '\\'],
+                    ['/', DIRECTORY_SEPARATOR, "{$rootDirectory}\\"],
                     ['\\', '\\', $this->laravel->getNamespace()],
-                    $this->dir . DIRECTORY_SEPARATOR . $name
+                    $this->formatPath($this->dir, $name)
                 );
             }, $models);
         }
@@ -206,20 +177,16 @@ class GenerateFactoryCommand extends Command
             return [];
         }
 
-        return array_map(function (SplFIleInfo $file) {
+        return array_map(function (SplFIleInfo $file) use ($rootDirectory) {
             return str_replace(
-                ['/', DIRECTORY_SEPARATOR, basename($this->laravel->path()) . '\\'],
+                ['/', DIRECTORY_SEPARATOR, "{$rootDirectory}\\"],
                 ['\\', '\\', $this->laravel->getNamespace()],
-                $file->getPath() . DIRECTORY_SEPARATOR . basename($file->getFilename(), '.php')
+                $this->formatPath($file->getPath(), basename($file->getFilename(), '.php'))
             );
         }, $this->files->allFiles($this->dir));
     }
 
     /**
-     * Load the properties from the database table.
-     *
-     * @param \Illuminate\Database\Eloquent\Model $model
-     *
      * @throws \Doctrine\DBAL\DBALException
      */
     protected function getPropertiesFromTable(Model $model): void
@@ -228,7 +195,7 @@ class GenerateFactoryCommand extends Command
         $schema = $model->getConnection()->getDoctrineSchemaManager();
         $database = null;
 
-        if (strpos($table, '.')) {
+        if (Str::contains($table, '.')) {
             [$database, $table] = explode('.', $table);
         }
 
@@ -256,10 +223,6 @@ class GenerateFactoryCommand extends Command
     }
 
     /**
-     * Load properties from model methods.
-     *
-     * @param \Illuminate\Database\Eloquent\Model $model
-     *
      * @throws \ReflectionException
      */
     protected function getPropertiesFromMethods(Model $model): void
@@ -289,7 +252,7 @@ class GenerateFactoryCommand extends Command
 
             $search = '$this->belongsTo(';
 
-            if (! stripos($code, $search)) {
+            if (! Str::contains($code, $search)) {
                 continue;
             }
 
@@ -302,17 +265,12 @@ class GenerateFactoryCommand extends Command
         }
     }
 
-    /**
-     * @param \Illuminate\Database\Eloquent\Model $model
-     * @param string                              $field
-     * @param string                              $type
-     */
     protected function setProperty(Model $model, string $field, string $type): void
     {
         if ($enumValues = EnumValues::get($model, $field)) {
-            $this->properties[$field] = $this->fakerPrefix(
-                'randomElement([\'' . implode("', '", $enumValues) . '\'])'
-            );
+            $enumValues = implode("', '", $enumValues);
+
+            $this->properties[$field] = $this->fakerPrefix("randomElement(['{$enumValues}'])");
 
             return;
         }
@@ -332,11 +290,6 @@ class GenerateFactoryCommand extends Command
         $this->properties[$field] = $this->mapByType('string');
     }
 
-    /**
-     * @param \ReflectionClass $reflection
-     *
-     * @return string
-     */
     protected function createFactory(ReflectionClass $reflection): string
     {
         return $this->view->make($this->factoryView(), [
@@ -345,23 +298,13 @@ class GenerateFactoryCommand extends Command
         ])->render();
     }
 
-    /**
-     * Return default models directory.
-     *
-     * @return string
-     */
     protected function defaultModelsDir(): string
     {
         return $this->isLaravel8OrAbove()
-            ? 'app' . DIRECTORY_SEPARATOR . 'Models'
+            ? $this->formatPath('app', 'Models')
             : 'app';
     }
 
-    /**
-     * Return factory template view.
-     *
-     * @return string
-     */
     protected function factoryView(): string
     {
         return $this->isLaravel8OrAbove()
@@ -369,36 +312,22 @@ class GenerateFactoryCommand extends Command
             : 'factory-generator::method-factory';
     }
 
-    /**
-     * @param \Illuminate\Database\Eloquent\Relations\Relation $relation
-     *
-     * @return string
-     */
     protected function factoryClass(Relation $relation): string
     {
+        $class = get_class($relation->getRelated());
+
         return $this->isLaravel8OrAbove()
-            ? '\\' . get_class($relation->getRelated()) . '::factory()'
-            : 'factory(' . get_class($relation->getRelated()) . '::class)';
+            ? "\\{$class}::factory()"
+            : "factory({$class}::class)";
     }
 
-    /**
-     * @param string $type
-     *
-     * @return string
-     */
     protected function fakerPrefix(string $type): string
     {
         return $this->isLaravel8OrAbove()
-            ? '$this->faker->' . $type
-            : '$faker->' . $type;
+            ? "\$this->faker->{$type}"
+            : "\$faker->{$type}";
     }
 
-    /**
-     * @param string                              $field
-     * @param \Illuminate\Database\Eloquent\Model $model
-     *
-     * @return bool
-     */
     protected function isFieldFakeable(string $field, Model $model): bool
     {
         return ! ($model->incrementing && $field === $model->getKeyName())
@@ -406,11 +335,6 @@ class GenerateFactoryCommand extends Command
             && ! (method_exists($model, 'getDeletedAtColumn') && $field === $model->getDeletedAtColumn());
     }
 
-    /**
-     * Map Faker usage based on field name.
-     *
-     * @return string|null
-     */
     protected function mapByName(string $field): ?string
     {
         $fakeableNames = [
@@ -429,7 +353,7 @@ class GenerateFactoryCommand extends Command
             'lng' => $this->fakerPrefix('longitude'),
             'longitude' => $this->fakerPrefix('longitude'),
             'name' => $this->fakerPrefix('name'),
-            'password' => 'bcrypt(' . $this->fakerPrefix('password') . ')',
+            'password' => "bcrypt({$this->fakerPrefix('password')})",
             'phone' => $this->fakerPrefix('phoneNumber'),
             'phone_number' => $this->fakerPrefix('phoneNumber'),
             'postcode' => $this->fakerPrefix('postcode'),
@@ -450,11 +374,6 @@ class GenerateFactoryCommand extends Command
         return $fakeableNames[$field] ?? null;
     }
 
-    /**
-     * Map Faker usage based on field type.
-     *
-     * @return string|null
-     */
     protected function mapByType(string $field): ?string
     {
         $fakeableTypes = [
@@ -476,10 +395,12 @@ class GenerateFactoryCommand extends Command
         return $fakeableTypes[$field] ?? null;
     }
 
+    protected function formatPath(string ...$paths): string
+    {
+        return implode(DIRECTORY_SEPARATOR, $paths);
+    }
+
     /**
-     * @param \Doctrine\DBAL\Schema\AbstractSchemaManager $schema
-     *
-     * @return void
      * @throws \Doctrine\DBAL\DBALException
      */
     protected function registerCustomTypes(AbstractSchemaManager $schema): void
@@ -490,7 +411,7 @@ class GenerateFactoryCommand extends Command
             return;
         }
 
-        $platform->registerDoctrineTypeMapping('enum', 'customEnum');
+        $platform->registerDoctrineTypeMapping('enum', 'enum');
         $platformName = $platform->getName();
         $customTypes = $this->laravel['config']->get("ide-helper.custom_db_types.{$platformName}", []);
 
@@ -499,11 +420,6 @@ class GenerateFactoryCommand extends Command
         }
     }
 
-    /**
-     * Return if running on Laravel 8+.
-     *
-     * @return bool
-     */
     protected function isLaravel8OrAbove(): bool
     {
         return (int) $this->laravel->version()[0] >= 8;

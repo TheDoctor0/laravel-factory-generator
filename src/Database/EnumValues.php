@@ -8,23 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class EnumValues
 {
-    /**
-     * @param \Illuminate\Database\Eloquent\Model $model
-     * @param string                              $field
-     *
-     * @return array|null
-     */
     public static function get(Model $model, string $field): ?array
     {
         return (new self)->values($model, $field);
     }
 
-    /**
-     * @param \Illuminate\Database\Eloquent\Model $model
-     * @param string                              $field
-     *
-     * @return array|null
-     */
     protected function values(Model $model, string $field): ?array
     {
         $driver = $model->getConnection()->getDriverName();

@@ -1,4 +1,4 @@
-<?php
+<?php /** @noinspection PhpUndefinedFieldInspection */
 
 declare(strict_types=1);
 
@@ -8,11 +8,6 @@ use Illuminate\Support\Facades\DB;
 
 class EnumPgsql extends EnumDriver
 {
-    /**
-     * Get enum values for model field in MySQL database.
-     *
-     * @return array|null
-     */
     public function values(): ?array
     {
         $type = DB::connection($this->connection)
