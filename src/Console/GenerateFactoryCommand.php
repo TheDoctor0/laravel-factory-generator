@@ -76,7 +76,9 @@ class GenerateFactoryCommand extends Command
         $this->files = $files;
         $this->view = $view;
 
-        Type::addType('customEnum', EnumType::class);
+        if (! Type::hasType('customEnum')) {
+            Type::addType('customEnum', EnumType::class);
+        }
     }
 
     /**
