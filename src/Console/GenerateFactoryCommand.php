@@ -44,6 +44,11 @@ class GenerateFactoryCommand extends Command
      */
     protected $force;
 
+   /**
+     * @var bool
+     */
+    protected $namespace;
+
     /**
      * @var \Illuminate\Filesystem\Filesystem
      */
@@ -78,6 +83,7 @@ class GenerateFactoryCommand extends Command
     {
         $this->dir = $this->option('dir') ?? $this->defaultModelsDir();
         $this->force = $this->option('force');
+        $this->namespace = $this->option('namespace');
 
         $models = $this->loadModels($this->argument('model'));
 
@@ -91,7 +97,8 @@ class GenerateFactoryCommand extends Command
                 continue;
             }
 
-            $content = $this->generateFactory($model);
+            $class   = $this->namespace ? $this->namespace . '\\' . $class : $model;
+            $content = $this->generateFactory($class);
 
             if (! $content) {
                 continue;
@@ -117,6 +124,7 @@ class GenerateFactoryCommand extends Command
         return [
             ['dir', 'D', InputOption::VALUE_OPTIONAL, 'The model directory', $this->dir],
             ['force', 'F', InputOption::VALUE_NONE, 'Overwrite any existing model factory'],
+            ['namespace', 'N', InputOption::VALUE_OPTIONAL, 'Model Namespace'],
         ];
     }
 
