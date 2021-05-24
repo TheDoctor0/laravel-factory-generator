@@ -44,6 +44,12 @@ In this case, run the artisan command:
 
 `php artisan generate:factory --dir app/Models`
 
+If your models are within a different namespace, you can specify this using `--namespace` option. 
+
+In this case, run the artisan command:
+
+`php artisan generate:factory --dir vendor/package/src/Models --namespace PackageNameSpace\\Models`
+
 ### Example
 
 #### Migration and Model

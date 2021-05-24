@@ -26,7 +26,7 @@ abstract class EnumDriver
     public function __construct(Model $model, string $field)
     {
         $this->connection = $model->getConnectionName();
-        $this->table = $model->getTable();
+        $this->table = $model->getConnection()->getTablePrefix() . $model->getTable();
         $this->field = $field;
     }
 
