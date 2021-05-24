@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace TheDoctor0\LaravelFactoryGenerator\Database;
 
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Model;
 
 abstract class EnumDriver
@@ -27,7 +26,7 @@ abstract class EnumDriver
     public function __construct(Model $model, string $field)
     {
         $this->connection = $model->getConnectionName();
-        $this->table = DB::getTablePrefix().$model->getTable();
+        $this->table = $model->getConnection()->getTablePrefix() . $model->getTable();
         $this->field = $field;
     }
 

@@ -40,14 +40,14 @@ class GenerateFactoryCommand extends Command
     protected $dir;
 
     /**
+     * @var string
+     */
+    protected $namespace;
+
+    /**
      * @var bool
      */
     protected $force;
-
-   /**
-     * @var bool
-     */
-    protected $namespace;
 
     /**
      * @var \Illuminate\Filesystem\Filesystem
@@ -82,8 +82,8 @@ class GenerateFactoryCommand extends Command
     public function handle(): void
     {
         $this->dir = $this->option('dir') ?? $this->defaultModelsDir();
-        $this->force = $this->option('force');
         $this->namespace = $this->option('namespace');
+        $this->force = $this->option('force');
 
         $models = $this->loadModels($this->argument('model'));
 
