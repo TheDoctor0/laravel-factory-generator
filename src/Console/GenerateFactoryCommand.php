@@ -92,7 +92,7 @@ class GenerateFactoryCommand extends Command
             $filename = "database/factories/{$class}Factory.php";
 
             if (! $this->force && $this->files->exists($filename)) {
-                $this->warn("Model factory exists, use --force to overwrite: {$filename}");
+                $this->warn("Model factory exists, use --force to overwrite: $filename");
 
                 continue;
             }
@@ -105,9 +105,9 @@ class GenerateFactoryCommand extends Command
             }
 
             if (! $this->files->put($filename, $content)) {
-                $this->error("Failed to save model factory: {$filename}");
+                $this->error("Failed to save model factory: $filename");
             } else {
-                $this->info("Model factory created: {$filename}");
+                $this->info("Model factory created: $filename");
             }
         }
     }
@@ -131,7 +131,7 @@ class GenerateFactoryCommand extends Command
     protected function generateFactory(string $model): ?string
     {
         if (! class_exists($model) && ! trait_exists($model)) {
-            $this->error("Unable to find {$model} class!");
+            $this->error("Unable to find $model class!");
 
             return null;
         }
@@ -152,7 +152,7 @@ class GenerateFactoryCommand extends Command
 
             return "<?php\n\n{$this->createFactory($reflection)}";
         } catch (Exception $e) {
-            $this->error("Could not analyze class {$model}.\nException: {$e->getMessage()}");
+            $this->error("Could not analyze class $model.\nException: {$e->getMessage()}");
         }
 
         return null;
@@ -172,7 +172,7 @@ class GenerateFactoryCommand extends Command
                 }
 
                 return str_replace(
-                    ['/', DIRECTORY_SEPARATOR, "{$rootDirectory}\\"],
+                    ['/', DIRECTORY_SEPARATOR, "$rootDirectory\\"],
                     ['\\', '\\', $this->laravel->getNamespace()],
                     $this->formatPath($this->dir, $name)
                 );
@@ -187,7 +187,7 @@ class GenerateFactoryCommand extends Command
 
         return array_map(function (SplFIleInfo $file) use ($rootDirectory) {
             return str_replace(
-                ['/', DIRECTORY_SEPARATOR, "{$rootDirectory}\\"],
+                ['/', DIRECTORY_SEPARATOR, "$rootDirectory\\"],
                 ['\\', '\\', $this->laravel->getNamespace()],
                 $this->formatPath($file->getPath(), basename($file->getFilename(), '.php'))
             );
@@ -200,7 +200,18 @@ class GenerateFactoryCommand extends Command
     protected function getPropertiesFromTable(Model $model): void
     {
         $table = $model->getConnection()->getTablePrefix() . $model->getTable();
-        $schema = $model->getConnection()->getDoctrineSchemaManager();
+
+        try {
+            $schema = $model->getConnection()->getDoctrineSchemaManager();
+        } catch (Exception $exception) {
+            $class = get_class($model);
+            $driver = $model->getConnection()->getDriverName();
+
+            $this->warn("Database driver ($driver) for $class model is not supported.");
+
+            return;
+        }
+
         $database = null;
 
         if (Str::contains($table, '.')) {
@@ -325,15 +336,15 @@ class GenerateFactoryCommand extends Command
         $class = get_class($relation->getRelated());
 
         return $this->isLaravel8OrAbove()
-            ? "\\{$class}::factory()"
-            : "factory({$class}::class)";
+            ? "\\$class::factory()"
+            : "factory($class::class)";
     }
 
     protected function fakerPrefix(string $type): string
     {
         return $this->isLaravel8OrAbove()
-            ? "\$this->faker->{$type}"
-            : "\$faker->{$type}";
+            ? "\$this->faker->$type"
+            : "\$faker->$type";
     }
 
     protected function isFieldFakeable(string $field, Model $model): bool
