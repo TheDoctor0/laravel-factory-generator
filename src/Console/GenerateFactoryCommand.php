@@ -289,7 +289,7 @@ class GenerateFactoryCommand extends Command
         if ($enumValues = EnumValues::get($model, $field)) {
             $enumValues = implode("', '", $enumValues);
 
-            $this->properties[$field] = $this->fakerPrefix("randomElement(['{$enumValues}'])");
+            $this->properties[$field] = $this->fakerPrefix("randomElement(['$enumValues'])");
 
             return;
         }
@@ -357,36 +357,73 @@ class GenerateFactoryCommand extends Command
     protected function mapByName(string $field): ?string
     {
         $fakeableNames = [
+            'language' => $this->fakerPrefix('languageCode'),
+            'lang' => $this->fakerPrefix('languageCode'),
+            'locale' => $this->fakerPrefix('locale'),
             'city' => $this->fakerPrefix('city'),
+            'town' => $this->fakerPrefix('city'),
+            'town_city' => $this->fakerPrefix('city'),
+            'state' => $this->fakerPrefix('state'),
+            'region' => $this->fakerPrefix('state'),
+            'region_state' => $this->fakerPrefix('state'),
             'company' => $this->fakerPrefix('company'),
             'country' => $this->fakerPrefix('country'),
             'description' => $this->fakerPrefix('text'),
             'email' => $this->fakerPrefix('safeEmail'),
+            'email_address' => $this->fakerPrefix('safeEmail'),
             'first_name' => $this->fakerPrefix('firstName'),
             'firstname' => $this->fakerPrefix('firstName'),
-            'guid' => $this->fakerPrefix('uuid'),
             'last_name' => $this->fakerPrefix('lastName'),
             'lastname' => $this->fakerPrefix('lastName'),
+            'name' => $this->fakerPrefix('name'),
+            'full_name' => $this->fakerPrefix('name'),
             'lat' => $this->fakerPrefix('latitude'),
             'latitude' => $this->fakerPrefix('latitude'),
             'lng' => $this->fakerPrefix('longitude'),
             'longitude' => $this->fakerPrefix('longitude'),
-            'name' => $this->fakerPrefix('name'),
             'password' => "bcrypt({$this->fakerPrefix('password')})",
             'phone' => $this->fakerPrefix('phoneNumber'),
+            'telephone' => $this->fakerPrefix('phoneNumber'),
             'phone_number' => $this->fakerPrefix('phoneNumber'),
             'postcode' => $this->fakerPrefix('postcode'),
             'postal_code' => $this->fakerPrefix('postcode'),
+            'zip' => $this->fakerPrefix('postcode'),
+            'zip_postal_code' => $this->fakerPrefix('postcode'),
             'slug' => $this->fakerPrefix('slug'),
             'street' => $this->fakerPrefix('streetName'),
+            'address' => $this->fakerPrefix('address'),
             'address1' => $this->fakerPrefix('streetAddress'),
             'address2' => $this->fakerPrefix('secondaryAddress'),
             'summary' => $this->fakerPrefix('text'),
+            'title' => $this->fakerPrefix('title'),
+            'subject' => $this->fakerPrefix('title'),
+            'note' => $this->fakerPrefix('sentence'),
+            'sentence' => $this->fakerPrefix('sentence'),
             'url' => $this->fakerPrefix('url'),
+            'link' => $this->fakerPrefix('url'),
+            'href' => $this->fakerPrefix('url'),
+            'domain' => $this->fakerPrefix('domainName'),
             'user_name' => $this->fakerPrefix('userName'),
             'username' => $this->fakerPrefix('userName'),
+            'currency' => $this->fakerPrefix('currencyCode'),
+            'guid' => $this->fakerPrefix('uuid'),
             'uuid' => $this->fakerPrefix('uuid'),
-            'zip' => $this->fakerPrefix('postcode'),
+            'iban' => $this->fakerPrefix('iban()'),
+            'mac' => $this->fakerPrefix('macAddress'),
+            'ip' => $this->fakerPrefix('ipv4'),
+            'ipv4' => $this->fakerPrefix('ipv4'),
+            'ipv6' => $this->fakerPrefix('ipv6'),
+            'request_ip' => $this->fakerPrefix('ipv4'),
+            'user_agent' => $this->fakerPrefix('userAgent'),
+            'request_user_agent' => $this->fakerPrefix('userAgent'),
+            'iso3' => $this->fakerPrefix('countryISOAlpha3'),
+            'hash' => $this->fakerPrefix('sha256'),
+            'sha256' => $this->fakerPrefix('sha256'),
+            'sha256_hash' => $this->fakerPrefix('sha256'),
+            'sha1' => $this->fakerPrefix('sha1'),
+            'sha1_hash' => $this->fakerPrefix('sha1'),
+            'md5' => $this->fakerPrefix('md5'),
+            'md5_hash' => $this->fakerPrefix('md5'),
             'remember_token' => 'Str::random(10)',
         ];
 
@@ -400,7 +437,7 @@ class GenerateFactoryCommand extends Command
             'text' => $this->fakerPrefix('text'),
             'date' => $this->fakerPrefix('date()'),
             'time' => $this->fakerPrefix('time()'),
-            'guid' => $this->fakerPrefix('word'),
+            'guid' => $this->fakerPrefix('uuid'),
             'datetimetz' => $this->fakerPrefix('dateTime()'),
             'datetime' => $this->fakerPrefix('dateTime()'),
             'integer' => $this->fakerPrefix('randomNumber()'),
@@ -432,7 +469,7 @@ class GenerateFactoryCommand extends Command
 
         $platform->registerDoctrineTypeMapping('enum', 'customEnum');
         $platformName = $platform->getName();
-        $customTypes = $this->laravel['config']->get("ide-helper.custom_db_types.{$platformName}", []);
+        $customTypes = $this->laravel['config']->get("ide-helper.custom_db_types.$platformName", []);
 
         foreach ($customTypes as $typeName => $doctrineTypeName) {
             $platform->registerDoctrineTypeMapping($typeName, $doctrineTypeName);
