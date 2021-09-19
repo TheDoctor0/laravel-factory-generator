@@ -130,7 +130,7 @@ class GenerateFactoryCommand extends Command
 
     protected function generateFactory(string $model): ?string
     {
-        if (! class_exists($model)) {
+        if (! class_exists($model) && ! trait_exists($model)) {
             $this->error("Unable to find {$model} class!");
 
             return null;
