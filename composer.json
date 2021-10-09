@@ -1,7 +1,7 @@
 {
     "name": "thedoctor0/laravel-factory-generator",
-    "description": "Generate Laravel test factories for your models.",
-    "keywords": ["laravel", "factory", "generator", "tests", "factories"],
+    "description": "Generate Laravel or Lumen test factories for your models.",
+    "keywords": ["laravel", "lumen", "factory", "generator", "tests", "factories"],
     "license": "MIT",
     "require": {
         "php": ">=7.2",
