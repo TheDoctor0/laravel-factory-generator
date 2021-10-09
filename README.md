@@ -6,7 +6,7 @@
 
 This package will generate [factories](https://laravel.com/docs/master/database-testing#writing-factories) from your existing models.
 
-That way you can get started with testing your Laravel application more quickly!
+That way you can get started with testing your Laravel or Lumen application more quickly!
 
 It is a forked version of [mpociot/laravel-test-factory-helper](https://github.com/mpociot/laravel-test-factory-helper) package.
 
@@ -17,6 +17,8 @@ You can install the package via composer:
 ```bash
 composer require thedoctor0/laravel-factory-generator --dev
 ```
+
+For Lumen it is also required to register `FactoryGeneratorServiceProvider`.
 
 ## Usage
 
@@ -36,7 +38,7 @@ You can _force_ overwriting existing model factories by using the `--force` opti
 
 `php artisan generate:factory --force`
 
-By default, it will search recursively for models under the `app/Models` (Laravel 8.x) or `app` for (Laravel 6.x and 7.x).
+By default, it will search recursively for models under the `app/Models` (Laravel/Lumen 8.x) or `app` for (Laravel/Lumen 6.x and 7.x).
 
 If your models are within a different folder, you can specify this using `--dir` option.
 
@@ -75,7 +77,7 @@ class User extends Model {
 
 #### Generated Factory
 
-For Laravel 6.x and 7.x:
+For Laravel/Lumen 6.x and 7.x:
 
 ```php
 $factory->define(App\User::class, function (Faker\Generator $faker) {
@@ -90,7 +92,7 @@ $factory->define(App\User::class, function (Faker\Generator $faker) {
 });
 ```
 
-For Laravel 8.x:
+For Laravel/Lumen 8.x:
 ```php
 class UserFactory extends Factory
 {

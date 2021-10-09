@@ -482,6 +482,8 @@ class GenerateFactoryCommand extends Command
 
     protected function isLaravel8OrAbove(): bool
     {
-        return (int) $this->laravel->version()[0] >= 8;
+        preg_match('/\d\.\d(\.\d|-dev)/', $this->laravel->version(), $version);
+
+        return (int) ($version[0] ?? $this->laravel->version())[0] >= 8;
     }
 }
