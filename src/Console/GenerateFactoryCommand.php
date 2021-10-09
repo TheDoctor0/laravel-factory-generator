@@ -207,7 +207,11 @@ class GenerateFactoryCommand extends Command
             $class = get_class($model);
             $driver = $model->getConnection()->getDriverName();
 
-            $this->warn("Database driver ($driver) for $class model is not supported.");
+            if (in_array($driver, ['mysql', 'pgsql', 'sqlite'])) {
+                $this->error("Database driver ($driver) for $class model is not configured properly!");
+            } else {
+                $this->warn("Database driver ($driver) for $class model is not supported.");
+            }
 
             return;
         }
