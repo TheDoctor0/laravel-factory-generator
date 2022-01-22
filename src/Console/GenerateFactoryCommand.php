@@ -50,6 +50,11 @@ class GenerateFactoryCommand extends Command
     protected $force;
 
     /**
+     * @var bool
+     */
+    protected $recursive;
+
+    /**
      * @var \Illuminate\Filesystem\Filesystem
      */
     protected $files;
@@ -84,6 +89,7 @@ class GenerateFactoryCommand extends Command
         $this->dir = $this->option('dir') ?? $this->defaultModelsDir();
         $this->namespace = $this->option('namespace');
         $this->force = $this->option('force');
+        $this->recursive = $this->option('recursive');
 
         $models = $this->loadModels($this->argument('model'));
 
@@ -91,13 +97,19 @@ class GenerateFactoryCommand extends Command
             $class = class_basename($model);
             $filename = "database/factories/{$class}Factory.php";
 
+            $class = $this->generateClassName($model);
+
+            if ($this->recursive) {
+                $filename = $this->generateRecursiveFileName($class);
+                $this->makeDirRecursively($class);
+            }
+
             if (! $this->force && $this->files->exists($filename)) {
                 $this->warn("Model factory exists, use --force to overwrite: $filename");
 
                 continue;
             }
 
-            $class   = $this->namespace ? $this->namespace . '\\' . $class : $model;
             $content = $this->generateFactory($class);
 
             if (! $content) {
@@ -125,12 +137,13 @@ class GenerateFactoryCommand extends Command
             ['dir', 'D', InputOption::VALUE_OPTIONAL, 'The model directory', $this->dir],
             ['force', 'F', InputOption::VALUE_NONE, 'Overwrite any existing model factory'],
             ['namespace', 'N', InputOption::VALUE_OPTIONAL, 'Model Namespace'],
+            ['recursive', 'R', InputOption::VALUE_NONE, 'Generate model factory recursively']
         ];
     }
 
     protected function generateFactory(string $model): ?string
     {
-        if (! class_exists($model) && ! trait_exists($model)) {
+        if (! $this->existsClassOrTrait($model)) {
             $this->error("Unable to find $model class!");
 
             return null;
@@ -141,7 +154,7 @@ class GenerateFactoryCommand extends Command
         try {
             $reflection = new ReflectionClass($model);
 
-            if (! $reflection->isSubclassOf(Model::class) || ! $reflection->IsInstantiable()) {
+            if (! $this->isInstantiableModelClass($reflection)) {
                 return null;
             }
 
@@ -318,6 +331,7 @@ class GenerateFactoryCommand extends Command
         return $this->view->make($this->factoryView(), [
             'reflection' => $reflection,
             'properties' => $this->properties,
+            'append' => $this->generateAdditionalNameSpace($reflection->getName()),
         ])->render();
     }
 
@@ -485,5 +499,68 @@ class GenerateFactoryCommand extends Command
         preg_match('/\d\.\d(\.\d|-dev)/', $this->laravel->version(), $version);
 
         return (int) ($version[0] ?? $this->laravel->version())[0] >= 8;
+    }
+
+    protected function getFileStructureDiff(string $class): array
+    {
+        if ($this->namespace) {
+            return array_diff(explode('\\', $class), explode('\\', $this->namespace));
+        }
+
+        return array_diff(explode('\\', $class), explode('/', ucfirst($this->dir)));
+    }
+
+    protected function generateRecursiveFileName(string $class): string
+    {
+        return 'database/factories/' . implode('/', $this->getFileStructureDiff($class)) . 'Factory.php';
+    }
+
+    protected function generateClassName(string $model): string
+    {
+        $filePathDiff = $this->getFileStructureDiff($model);
+
+        return $this->namespace ? $this->namespace . '\\' . implode('\\', $filePathDiff) : $model;
+    }
+
+    protected function generateAdditionalNameSpace(string $class): string
+    {
+        $append = '';
+
+        $filePathDiff = $this->getFileStructureDiff($class);
+        array_pop($filePathDiff);
+
+        if ($this->recursive && !empty($filePathDiff)) {
+            $append = '\\' . implode('\\', $filePathDiff);
+        }
+
+        return $append;
+    }
+
+    protected function makeDirRecursively(string $class, int $permission = 0755): void
+    {
+        if (! $this->existsClassOrTrait($class)) {
+            return;
+        }
+
+        try {
+            $reflection = new ReflectionClass($class);
+            $dir = 'database/factories' . str_replace('\\', '/', $this->generateAdditionalNameSpace($class));
+
+            if (!file_exists($dir) && $this->isInstantiableModelClass($reflection)) {
+                mkdir($dir, $permission, true);
+            }
+        } catch (Exception $e) {
+            $this->error("Could not analyze class $class.\nException: {$e->getMessage()}");
+        }
+    }
+
+    protected function isInstantiableModelClass(ReflectionClass $reflection): bool
+    {
+        return $reflection->isSubclassOf(Model::class) && $reflection->IsInstantiable();
+    }
+
+    protected function existsClassOrTrait(string $class): bool
+    {
+        return class_exists($class) || trait_exists($class);
     }
 }

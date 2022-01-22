@@ -1,4 +1,4 @@
-namespace Database\Factories;
+namespace {{'Database\\Factories'. $append}};
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 @isset($properties['remember_token'])

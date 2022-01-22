@@ -28,15 +28,21 @@ To generate multiple factories at once, run the artisan command:
 
 This command will find all models within your application and create test factories.
 
+---
+
 To generate a factory for only specific model or models, run the artisan command:
 
 `php artisan generate:factory User Company`
+
+---
 
 By default, generation will not overwrite any existing model factories.
 
 You can _force_ overwriting existing model factories by using the `--force` option:
 
 `php artisan generate:factory --force`
+
+---
 
 By default, it will search recursively for models under the `app/Models` (Laravel/Lumen 8.x) or `app` for (Laravel/Lumen 6.x and 7.x).
 
@@ -46,11 +52,23 @@ In this case, run the artisan command:
 
 `php artisan generate:factory --dir app/Models`
 
+---
+
 If your models are within a different namespace, you can specify it using `--namespace` option.
 
 You just need to execute this artisan command:
 
 `php artisan generate:factory --dir vendor/package/src/Models --namespace CustomNamespace\\Models`
+
+---
+
+By default, your model directory structure is not taken into account, even though it has subdirectories.
+
+You can reflect it to `database/factories` directory by using the `--recursive` option:
+
+`php artisan generate:factory --recursive`
+
+---
 
 ### Example
 
