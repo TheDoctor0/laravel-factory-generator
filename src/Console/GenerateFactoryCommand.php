@@ -97,7 +97,7 @@ class GenerateFactoryCommand extends Command
             $class = class_basename($model);
             $filename = "database/factories/{$class}Factory.php";
 
-            $class = $this->namespace ? $this->namespace . '\\' . $class : $model;
+            $class = $this->generateClassName($model);
 
             if ($this->recursive) {
                 $filename = $this->generateRecursiveFileName($class);
@@ -513,6 +513,13 @@ class GenerateFactoryCommand extends Command
     protected function generateRecursiveFileName(string $class): string
     {
         return 'database/factories/' . implode('/', $this->getFileStructureDiff($class)) . 'Factory.php';
+    }
+
+    protected function generateClassName(string $model): string
+    {
+        $filePathDiff = $this->getFileStructureDiff($model);
+
+        return $this->namespace ? $this->namespace . '\\' . implode('\\', $filePathDiff) : $model;
     }
 
     protected function generateAdditionalNameSpace(string $class): string
