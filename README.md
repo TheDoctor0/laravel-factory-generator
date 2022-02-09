@@ -110,7 +110,7 @@ $factory->define(App\User::class, function (Faker\Generator $faker) {
 });
 ```
 
-For Laravel/Lumen 8.x:
+For Laravel/Lumen 8.x and up:
 ```php
 class UserFactory extends Factory
 {
