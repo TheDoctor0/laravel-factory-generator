@@ -44,7 +44,7 @@ You can _force_ overwriting existing model factories by using the `--force` opti
 
 ---
 
-By default, it will search recursively for models under the `app/Models` (Laravel/Lumen 8.x) or `app` for (Laravel/Lumen 6.x and 7.x).
+By default, it will search recursively for models under the `app/Models` (Laravel 8.x and up) or `app` for (Laravel 6.x and 7.x).
 
 If your models are within a different folder, you can specify this using `--dir` option.
 
@@ -95,7 +95,7 @@ class User extends Model {
 
 #### Generated Factory
 
-For Laravel/Lumen 6.x and 7.x:
+For Laravel 6.x and 7.x:
 
 ```php
 $factory->define(App\User::class, function (Faker\Generator $faker) {
@@ -110,7 +110,7 @@ $factory->define(App\User::class, function (Faker\Generator $faker) {
 });
 ```
 
-For Laravel/Lumen 8.x and up:
+For Laravel 8.x and up:
 ```php
 class UserFactory extends Factory
 {
