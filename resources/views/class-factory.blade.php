@@ -6,7 +6,7 @@ use Illuminate\Support\Str;
 @endisset
 use {{ $reflection->getName() }};
 
-class {{ $reflection->getShortName() }}Factory extends Factory
+final class {{ $reflection->getShortName() }}Factory extends Factory
 {
     /**
     * The name of the factory's corresponding model.
