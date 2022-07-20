@@ -6,6 +6,9 @@ use Illuminate\Support\Str;
 @endisset
 use {{ $reflection->getName() }};
 
+/**
+ * @extends Factory<{{ $reflection->getShortName() }}>
+ */
 class {{ $reflection->getShortName() }}Factory extends Factory
 {
     /**
