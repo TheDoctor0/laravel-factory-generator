@@ -9,7 +9,7 @@ use {{ $reflection->getName() }};
 /**
  * @extends Factory<{{ $reflection->getShortName() }}>
  */
-class {{ $reflection->getShortName() }}Factory extends Factory
+final class {{ $reflection->getShortName() }}Factory extends Factory
 {
     /**
     * The name of the factory's corresponding model.
