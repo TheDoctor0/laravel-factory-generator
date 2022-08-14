@@ -1,22 +1,24 @@
-namespace {{'Database\\Factories'. $append}};
+declare(strict_types=1);
 
-use Illuminate\Database\Eloquent\Factories\Factory;
+namespace {{ $namespace }};
+
+use {{ $name }};
 @isset($properties['remember_token'])
 use Illuminate\Support\Str;
 @endisset
-use {{ $reflection->getName() }};
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<{{ $reflection->getShortName() }}>
+ * @@extends Factory<\{{ $name }}>
  */
-final class {{ $reflection->getShortName() }}Factory extends Factory
+final class {{ $shortName }}Factory extends Factory
 {
     /**
     * The name of the factory's corresponding model.
     *
     * @var string
     */
-    protected $model = {{ $reflection->getShortName() }}::class;
+    protected $model = {{ $shortName }}::class;
 
     /**
     * Define the model's default state.

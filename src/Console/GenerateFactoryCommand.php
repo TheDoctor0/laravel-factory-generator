@@ -329,9 +329,10 @@ class GenerateFactoryCommand extends Command
     protected function createFactory(ReflectionClass $reflection): string
     {
         return $this->view->make($this->factoryView(), [
-            'reflection' => $reflection,
             'properties' => $this->properties,
-            'append' => $this->generateAdditionalNameSpace($reflection->getName()),
+            'name' => $reflection->getName(),
+            'shortName' => $reflection->getShortName(),
+            'namespace' => 'Database\\Factories' . $this->generateAdditionalNameSpace($reflection->getName()),
         ])->render();
     }
 
