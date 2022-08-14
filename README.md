@@ -4,11 +4,11 @@
 [![Packagist](https://img.shields.io/packagist/dt/TheDoctor0/laravel-factory-generator.svg)](https://packagist.org/packages/TheDoctor0/laravel-factory-generator)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/TheDoctor0/laravel-factory-generator/blob/master/LICENSE.md)
 
-This package will generate [factories](https://laravel.com/docs/master/database-testing#writing-factories) from your existing models.
+[![Banner](https://banners.beyondco.de/Laravel%20Factory%20Generator.png?theme=light&packageManager=composer+require&packageName=thedoctor0%2Flaravel-factory-generator+--dev&pattern=architect&style=style_1&description=Automatically+generate+test+factories+for+all+your+models&md=1&showWatermark=1&fontSize=100px&images=https%3A%2F%2Flaravel.com%2Fimg%2Flogomark.min.svg)]()
 
-That way you can get started with testing your Laravel or Lumen application more quickly!
+Automatically generate [factories](https://laravel.com/docs/master/database-testing#writing-factories) from your existing models.
 
-It is a forked version of [mpociot/laravel-test-factory-helper](https://github.com/mpociot/laravel-test-factory-helper) package.
+It will allow you to write tests containing your models much faster.
 
 ## Installation
 
@@ -18,17 +18,103 @@ You can install the package via composer:
 composer require thedoctor0/laravel-factory-generator --dev
 ```
 
-For Lumen it is also required to register `FactoryGeneratorServiceProvider`.
-
 ## Usage
 
-To generate multiple factories at once, run the artisan command:
+To generate all factories at once, simply run this artisan command:
 
 `php artisan generate:factory`
 
-This command will find all models within your application and create test factories.
+It will find all models and generate test factories based on the database structure and model relations.
 
----
+### Example
+
+#### Migration and Model
+```php
+Schema::create('users', function (Blueprint $table) {
+    $table->increments('id');
+    $table->string('name');
+    $table->string('username');
+    $table->string('email')->unique();
+    $table->string('password', 60);
+    $table->integer('company_id');
+    $table->rememberToken();
+    $table->timestamps();
+});
+
+class User extends Model {
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+}
+```
+
+#### Generated Factory
+
+For Laravel 6.x and 7.x:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use Faker\Generator as Faker;
+
+$factory->define(App\User::class, function (Faker\Generator $faker) {
+    return [
+        'name' => $faker->name,
+        'username' => $faker->userName,
+        'email' => $faker->safeEmail,
+        'password' => bcrypt($faker->password),
+        'company_id' => factory(App\Company::class),
+        'remember_token' => Str::random(10),
+    ];
+});
+```
+
+For Laravel 8.x and up:
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Database\Factories;
+
+use App\Models\Contact;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends Factory<\App\Models\User>
+ */
+final class UserFactory extends Factory
+{
+    /**
+     * The name of the factory's corresponding model.
+     *
+     * @var string
+     */
+    protected $model = User::class;
+
+    /**
+     * Define the model's default state.
+     *
+     * @return array
+     */
+    public function definition(): array
+    {
+        return [
+            'name' => $this->faker->name,
+            'username' => $this->faker->userName,
+            'email' => $this->faker->safeEmail,
+            'password' => bcrypt($this->faker->password),
+            'company_id' => \App\Company::factory(),
+            'remember_token' => Str::random(10),
+        ];
+    }
+}
+```
+
+## Advanced usage
 
 To generate a factory for only specific model or models, run the artisan command:
 
@@ -69,76 +155,6 @@ You can reflect it to `database/factories` directory by using the `--recursive` 
 `php artisan generate:factory --recursive`
 
 ---
-
-### Example
-
-#### Migration and Model
-```php
-Schema::create('users', function (Blueprint $table) {
-    $table->increments('id');
-    $table->string('name');
-    $table->string('username');
-    $table->string('email')->unique();
-    $table->string('password', 60);
-    $table->integer('company_id');
-    $table->rememberToken();
-    $table->timestamps();
-});
-
-class User extends Model {
-    public function company()
-    {
-        return $this->belongsTo(Company::class);
-    }
-}
-```
-
-#### Generated Factory
-
-For Laravel 6.x and 7.x:
-
-```php
-$factory->define(App\User::class, function (Faker\Generator $faker) {
-    return [
-        'name' => $faker->name,
-        'username' => $faker->userName,
-        'email' => $faker->safeEmail,
-        'password' => bcrypt($faker->password),
-        'company_id' => factory(App\Company::class),
-        'remember_token' => Str::random(10),
-    ];
-});
-```
-
-For Laravel 8.x and up:
-```php
-class UserFactory extends Factory
-{
-    /**
-     * The name of the factory's corresponding model.
-     *
-     * @var string
-     */
-    protected $model = User::class;
-
-    /**
-     * Define the model's default state.
-     *
-     * @return array
-     */
-    public function definition(): array
-    {
-        return [
-            'name' => $this->faker->name,
-            'username' => $this->faker->userName,
-            'email' => $this->faker->safeEmail,
-            'password' => bcrypt($this->faker->password),
-            'company_id' => \App\Company::factory(),
-            'remember_token' => Str::random(10),
-        ];
-    }
-}
-```
 
 ## License
 
