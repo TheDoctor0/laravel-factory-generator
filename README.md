@@ -22,7 +22,9 @@ composer require thedoctor0/laravel-factory-generator --dev
 
 To generate all factories at once, simply run this artisan command:
 
-`php artisan generate:factory`
+```bash
+php artisan generate:factory
+```
 
 It will find all models and generate test factories based on the database structure and model relations.
 
@@ -118,7 +120,9 @@ final class UserFactory extends Factory
 
 To generate a factory for only specific model or models, run the artisan command:
 
-`php artisan generate:factory User Company`
+```bash
+php artisan generate:factory User Company
+```
 
 ---
 
@@ -126,7 +130,9 @@ By default, generation will not overwrite any existing model factories.
 
 You can _force_ overwriting existing model factories by using the `--force` option:
 
-`php artisan generate:factory --force`
+```bash
+php artisan generate:factory --force
+```
 
 ---
 
@@ -136,7 +142,9 @@ If your models are within a different folder, you can specify this using `--dir`
 
 In this case, run the artisan command:
 
-`php artisan generate:factory --dir app/Models`
+```bash
+php artisan generate:factory --dir app/Models
+```
 
 ---
 
@@ -144,7 +152,9 @@ If your models are within a different namespace, you can specify it using `--nam
 
 You just need to execute this artisan command:
 
-`php artisan generate:factory --dir vendor/package/src/Models --namespace CustomNamespace\\Models`
+```bash
+php artisan generate:factory --dir vendor/package/src/Models --namespace CustomNamespace\\Models
+```
 
 ---
 
@@ -152,7 +162,9 @@ By default, your model directory structure is not taken into account, even thoug
 
 You can reflect it to `database/factories` directory by using the `--recursive` option:
 
-`php artisan generate:factory --recursive`
+```bash
+php artisan generate:factory --recursive
+```
 
 ---
 
