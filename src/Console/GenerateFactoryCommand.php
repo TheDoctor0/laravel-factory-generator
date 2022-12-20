@@ -369,6 +369,10 @@ class GenerateFactoryCommand extends Command
 
     protected function fakerPrefix(string $type): string
     {
+        if ($this->isLaravel918OrAbove()) {
+            return "fake()->name->$type";
+        }
+
         return $this->isLaravel8OrAbove()
             ? "\$this->faker->$type"
             : "\$faker->$type";
@@ -505,9 +509,12 @@ class GenerateFactoryCommand extends Command
 
     protected function isLaravel8OrAbove(): bool
     {
-        preg_match('/\d\.\d(\.\d|-dev)/', $this->laravel->version(), $version);
+        return version_compare($this->laravel->version(), '8.0.0', '>=');
+    }
 
-        return (int) ($version[0] ?? $this->laravel->version())[0] >= 8;
+    protected function isLaravel918OrAbove(): bool
+    {
+        return version_compare($this->laravel->version(), '9.18.0', '>=');
     }
 
     protected function getFileStructureDiff(string $class): array

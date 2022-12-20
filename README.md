@@ -53,28 +53,6 @@ class User extends Model {
 
 #### Generated Factory
 
-For Laravel 6.x and 7.x:
-
-```php
-<?php
-
-declare(strict_types=1);
-
-use Faker\Generator as Faker;
-
-$factory->define(App\User::class, function (Faker\Generator $faker) {
-    return [
-        'name' => $faker->name,
-        'username' => $faker->userName,
-        'email' => $faker->safeEmail,
-        'password' => bcrypt($faker->password),
-        'company_id' => factory(App\Company::class),
-        'remember_token' => Str::random(10),
-    ];
-});
-```
-
-For Laravel 8.x and up:
 ```php
 <?php
 
@@ -105,15 +83,37 @@ final class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => $this->faker->name,
-            'username' => $this->faker->userName,
-            'email' => $this->faker->safeEmail,
-            'password' => bcrypt($this->faker->password),
+            'name' => faker()->name,
+            'username' => faker()->userName,
+            'email' => faker()->safeEmail,
+            'password' => bcrypt(faker()->password),
             'company_id' => \App\Company::factory(),
             'remember_token' => Str::random(10),
         ];
     }
 }
+```
+
+For Laravel 8.x and 9.x below 9.18.0 class based factory will be generated but with `$this->faker` instead of `faker()` helper.
+
+To keep backwards-compatibility with Laravel 6.x and 7.x, function based factory will be generated:
+```php
+<?php
+
+declare(strict_types=1);
+
+use Faker\Generator as Faker;
+
+$factory->define(App\User::class, function (Faker\Generator $faker) {
+    return [
+        'name' => $faker->name,
+        'username' => $faker->userName,
+        'email' => $faker->safeEmail,
+        'password' => bcrypt($faker->password),
+        'company_id' => factory(App\Company::class),
+        'remember_token' => Str::random(10),
+    ];
+});
 ```
 
 ## Advanced usage
