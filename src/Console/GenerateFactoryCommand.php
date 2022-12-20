@@ -160,8 +160,16 @@ class GenerateFactoryCommand extends Command
 
             $eloquentModel = $this->laravel->make($model);
 
+            if (method_exists($eloquentModel, 'factoryGeneratorInit')) {
+                $eloquentModel->factoryGeneratorInit();
+            }
+
             $this->getPropertiesFromTable($eloquentModel);
             $this->getPropertiesFromMethods($eloquentModel);
+
+            if (method_exists($eloquentModel, 'factoryGeneratorEnd')) {
+                $eloquentModel->factoryGeneratorEnd();
+            }
 
             return "<?php\n\n{$this->createFactory($reflection)}";
         } catch (Exception $e) {
