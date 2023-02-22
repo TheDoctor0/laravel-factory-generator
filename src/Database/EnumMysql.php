@@ -10,13 +10,13 @@ class EnumMysql extends EnumDriver
 {
     public function values(): ?array
     {
+        $query = DB::raw("
+            SHOW COLUMNS FROM `{$this->table}`
+            WHERE Field = '{$this->field}'
+        ");
+
         $type = DB::connection($this->connection)
-            ->select(
-                DB::raw("
-                    SHOW COLUMNS FROM `{$this->table}`
-                    WHERE Field = '{$this->field}'
-                ")
-            );
+            ->select(is_string($query) ? $query : $query->getValue(DB::connection()->getQueryGrammar()));
 
         preg_match_all("/'([^']+)'/", $type[0]->Type, $matches);
 
