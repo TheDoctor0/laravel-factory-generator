@@ -370,7 +370,7 @@ class GenerateFactoryCommand extends Command
     protected function fakerPrefix(string $type): string
     {
         if ($this->isLaravel918OrAbove()) {
-            return "fake()->name->$type";
+            return "fake()->$type";
         }
 
         return $this->isLaravel8OrAbove()
