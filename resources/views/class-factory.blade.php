@@ -21,6 +21,45 @@ final class {{ $shortName }}Factory extends Factory
     protected $model = {{ $shortName }}::class;
 
     /**
+    * Indicates if the callbacks should be executed.
+    *
+    * @var bool $shouldExecuteCallbacks
+    */
+    protected static bool $shouldExecuteCallbacks = true;
+
+
+
+    /**
+    * Set the callbacks to not be executed.
+    *
+    * @return {{ $shortName }}Factory
+    */
+    public function withoutCallbacks(): {{ $shortName }}Factory
+    {
+        {{ $shortName }}Factory::$shouldExecuteCallbacks = false;
+
+        return $this;
+    }
+
+    /**
+    * Configure the model factory.
+    *
+    * @return $this
+    */
+    public function configure(): {{ $shortName }}Factory
+    {
+        if (!{{ $shortName }}Factory::$shouldExecuteCallbacks) {
+        return $this;
+        }
+
+        return $this->afterMaking(function ({{ $shortName }} ${{ Str::lower($shortName) }}) {
+            //
+        })->afterCreating(function ({{ $shortName }} ${{ Str::lower($shortName) }}) {
+            //
+        });
+    }
+
+    /**
     * Define the model's default state.
     *
     * @return array
