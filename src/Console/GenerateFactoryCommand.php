@@ -44,7 +44,7 @@ class GenerateFactoryCommand extends Command
 
     protected string $dir;
 
-    protected string $namespace;
+    protected ?string $namespace;
 
     protected bool $force;
 
@@ -117,7 +117,7 @@ class GenerateFactoryCommand extends Command
     protected function getOptions(): array
     {
         return [
-            ['dir', 'D', InputOption::VALUE_OPTIONAL, 'The model directory', $this->dir],
+            ['dir', 'D', InputOption::VALUE_OPTIONAL, 'The model directory'],
             ['force', 'F', InputOption::VALUE_NONE, 'Overwrite any existing model factory'],
             ['namespace', 'N', InputOption::VALUE_OPTIONAL, 'Model Namespace'],
             ['recursive', 'R', InputOption::VALUE_NONE, 'Generate model factory recursively']

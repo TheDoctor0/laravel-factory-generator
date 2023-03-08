@@ -98,13 +98,15 @@ final class UserFactory extends Factory
 
 ## Advanced usage
 
+### Selecting models
+
 To generate a factory for only specific model or models, run the artisan command:
 
 ```bash
 php artisan generate:factory User Company
 ```
 
----
+### Overwriting existing factories
 
 By default, generation will not overwrite any existing model factories.
 
@@ -114,7 +116,7 @@ You can _force_ overwriting existing model factories by using the `--force` opti
 php artisan generate:factory --force
 ```
 
----
+### Customizing the output directory
 
 By default, it will search recursively for models under the `app/Models` directory.
 
@@ -126,7 +128,7 @@ In this case, run the artisan command:
 php artisan generate:factory --dir app/Models
 ```
 
----
+### Customizing the namespace
 
 If your models are within a different namespace, you can specify it using `--namespace` option.
 
@@ -136,7 +138,7 @@ You just need to execute this artisan command:
 php artisan generate:factory --dir vendor/package/src/Models --namespace CustomNamespace\\Models
 ```
 
----
+### Using recursive mode
 
 By default, your model directory structure is not taken into account, even though it has subdirectories.
 
@@ -146,7 +148,15 @@ You can reflect it to `database/factories` directory by using the `--recursive` 
 php artisan generate:factory --recursive
 ```
 
----
+### Customizing the factory template
+
+If you want you can customize the factory template to suit your needs.
+
+To publish a factory template to `resources/views/vendor/factory-generator/factory.blade.php`, run the artisan command:
+
+```bash
+php artisan vendor:publish --tag="factory-generator"
+```
 
 ## License
 
