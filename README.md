@@ -18,6 +18,8 @@ You can install the package via composer:
 composer require thedoctor0/laravel-factory-generator --dev
 ```
 
+For Laravel 6.x and 7.x check the [v1.2.5](https://github.com/TheDoctor0/laravel-factory-generator/tree/laravel-7).
+
 ## Usage
 
 To generate all factories at once, simply run this artisan command:
@@ -94,28 +96,6 @@ final class UserFactory extends Factory
 }
 ```
 
-For Laravel 8.x and 9.x below 9.18.0 class based factory will be generated but with `$this->faker` instead of `faker()` helper.
-
-To keep backwards-compatibility with Laravel 6.x and 7.x, function based factory will be generated:
-```php
-<?php
-
-declare(strict_types=1);
-
-use Faker\Generator as Faker;
-
-$factory->define(App\User::class, function (Faker\Generator $faker) {
-    return [
-        'name' => $faker->name,
-        'username' => $faker->userName,
-        'email' => $faker->safeEmail,
-        'password' => bcrypt($faker->password),
-        'company_id' => factory(App\Company::class),
-        'remember_token' => Str::random(10),
-    ];
-});
-```
-
 ## Advanced usage
 
 To generate a factory for only specific model or models, run the artisan command:
@@ -136,7 +116,7 @@ php artisan generate:factory --force
 
 ---
 
-By default, it will search recursively for models under the `app/Models` (Laravel 8.x and up) or `app` for (Laravel 6.x and 7.x).
+By default, it will search recursively for models under the `app/Models` directory.
 
 If your models are within a different folder, you can specify this using `--dir` option.
 

@@ -15,10 +15,12 @@ class FactoryGeneratorServiceProvider extends ServiceProvider
             return;
         }
 
-        $viewPath = __DIR__ . '/../resources/views';
+        $this->publishes([
+            __DIR__.'/../resources/views' => resource_path('views/vendor/factory-generator'),
+        ], 'views');
 
-        $this->loadViewsFrom($viewPath, 'factory-generator');
+        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'factory-generator');
 
-        $this->commands([GenerateFactoryCommand::class]);
+        $this->commands(GenerateFactoryCommand::class);
     }
 }

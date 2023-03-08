@@ -25,49 +25,32 @@ use TheDoctor0\LaravelFactoryGenerator\Database\EnumValues;
 class GenerateFactoryCommand extends Command
 {
     /**
+     * The console command name.
+     *
      * @var string
      */
     protected $name = 'generate:factory';
 
     /**
+     * The console command description.
+     *
      * @var string
      */
     protected $description = 'Generate test factories for models';
 
-    /**
-     * @var string
-     */
-    protected $dir;
+    protected Filesystem $files;
 
-    /**
-     * @var string
-     */
-    protected $namespace;
+    protected Factory $view;
 
-    /**
-     * @var bool
-     */
-    protected $force;
+    protected string $dir;
 
-    /**
-     * @var bool
-     */
-    protected $recursive;
+    protected string $namespace;
 
-    /**
-     * @var \Illuminate\Filesystem\Filesystem
-     */
-    protected $files;
+    protected bool $force;
 
-    /**
-     * @var \Illuminate\Contracts\View\Factory
-     */
-    protected $view;
+    protected bool $recursive;
 
-    /**
-     * @var array
-     */
-    protected $properties = [];
+    protected array $properties = [];
 
     /**
      * @throws \Doctrine\DBAL\DBALException
@@ -336,7 +319,7 @@ class GenerateFactoryCommand extends Command
 
     protected function createFactory(ReflectionClass $reflection): string
     {
-        return $this->view->make($this->factoryView(), [
+        return $this->view->make('factory-generator::factory', [
             'properties' => $this->properties,
             'name' => $reflection->getName(),
             'shortName' => $reflection->getShortName(),
@@ -346,36 +329,21 @@ class GenerateFactoryCommand extends Command
 
     protected function defaultModelsDir(): string
     {
-        return $this->isLaravel8OrAbove()
-            ? $this->formatPath('app', 'Models')
-            : 'app';
-    }
-
-    protected function factoryView(): string
-    {
-        return $this->isLaravel8OrAbove()
-            ? 'factory-generator::class-factory'
-            : 'factory-generator::method-factory';
+        return $this->formatPath('app', 'Models');
     }
 
     protected function factoryClass(Relation $relation): string
     {
         $class = get_class($relation->getRelated());
 
-        return $this->isLaravel8OrAbove()
-            ? "\\$class::factory()"
-            : "factory($class::class)";
+        return "\\$class::factory()";
     }
 
     protected function fakerPrefix(string $type): string
     {
-        if ($this->isLaravel918OrAbove()) {
-            return "fake()->$type";
-        }
-
-        return $this->isLaravel8OrAbove()
-            ? "\$this->faker->$type"
-            : "\$faker->$type";
+        return version_compare($this->laravel->version(), '9.18.0', '>=')
+            ? "fake()->$type"
+            : "\$this->faker->$type";
     }
 
     protected function isFieldFakeable(string $field, Model $model): bool
@@ -507,16 +475,6 @@ class GenerateFactoryCommand extends Command
         }
     }
 
-    protected function isLaravel8OrAbove(): bool
-    {
-        return version_compare($this->laravel->version(), '8.0.0', '>=');
-    }
-
-    protected function isLaravel918OrAbove(): bool
-    {
-        return version_compare($this->laravel->version(), '9.18.0', '>=');
-    }
-
     protected function getFileStructureDiff(string $class): array
     {
         if ($this->namespace) {
@@ -541,11 +499,11 @@ class GenerateFactoryCommand extends Command
     protected function generateAdditionalNameSpace(string $class): string
     {
         $append = '';
-
         $filePathDiff = $this->getFileStructureDiff($class);
+
         array_pop($filePathDiff);
 
-        if ($this->recursive && !empty($filePathDiff)) {
+        if ($this->recursive && ! empty($filePathDiff)) {
             $append = '\\' . implode('\\', $filePathDiff);
         }
 
@@ -562,7 +520,7 @@ class GenerateFactoryCommand extends Command
             $reflection = new ReflectionClass($class);
             $dir = 'database/factories' . str_replace('\\', '/', $this->generateAdditionalNameSpace($class));
 
-            if (!file_exists($dir) && $this->isInstantiableModelClass($reflection)) {
+            if (! file_exists($dir) && $this->isInstantiableModelClass($reflection)) {
                 mkdir($dir, $permission, true);
             }
         } catch (Exception $e) {
