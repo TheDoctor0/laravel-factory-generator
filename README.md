@@ -15,7 +15,7 @@ It will allow you to write tests containing your models much faster.
 You can install the package via composer:
 
 ```bash
-composer require thedoctor0/laravel-factory-generator --dev
+composer require thedoctor0/laravel-factory-generator@1.2.5 --dev
 ```
 
 ## Usage
@@ -58,50 +58,6 @@ class User extends Model {
 
 declare(strict_types=1);
 
-namespace Database\Factories;
-
-use App\Models\Contact;
-use Illuminate\Database\Eloquent\Factories\Factory;
-
-/**
- * @extends Factory<\App\Models\User>
- */
-final class UserFactory extends Factory
-{
-    /**
-     * The name of the factory's corresponding model.
-     *
-     * @var string
-     */
-    protected $model = User::class;
-
-    /**
-     * Define the model's default state.
-     *
-     * @return array
-     */
-    public function definition(): array
-    {
-        return [
-            'name' => faker()->name,
-            'username' => faker()->userName,
-            'email' => faker()->safeEmail,
-            'password' => bcrypt(faker()->password),
-            'company_id' => \App\Company::factory(),
-            'remember_token' => Str::random(10),
-        ];
-    }
-}
-```
-
-For Laravel 8.x and 9.x below 9.18.0 class based factory will be generated but with `$this->faker` instead of `faker()` helper.
-
-To keep backwards-compatibility with Laravel 6.x and 7.x, function based factory will be generated:
-```php
-<?php
-
-declare(strict_types=1);
-
 use Faker\Generator as Faker;
 
 $factory->define(App\User::class, function (Faker\Generator $faker) {
@@ -136,7 +92,7 @@ php artisan generate:factory --force
 
 ---
 
-By default, it will search recursively for models under the `app/Models` (Laravel 8.x and up) or `app` for (Laravel 6.x and 7.x).
+By default, it will search recursively for models under the `app` directory.
 
 If your models are within a different folder, you can specify this using `--dir` option.
 
