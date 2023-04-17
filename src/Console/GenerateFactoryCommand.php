@@ -236,7 +236,7 @@ class GenerateFactoryCommand extends Command
 
         foreach ($columns as $column) {
             $field = $column->getName();
-            $nullable = $column->getNotnull();
+            $nullable = !$column->getNotnull();
 
             if (in_array($field, $model->getDates(), true)) {
                 $type = 'datetime';
