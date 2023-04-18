@@ -236,6 +236,7 @@ class GenerateFactoryCommand extends Command
 
         foreach ($columns as $column) {
             $field = $column->getName();
+            $nullable = !$column->getNotnull();
 
             if (in_array($field, $model->getDates(), true)) {
                 $type = 'datetime';
@@ -244,7 +245,7 @@ class GenerateFactoryCommand extends Command
             }
 
             if ($this->isFieldFakeable($field, $model)) {
-                $this->setProperty($model, $field, $type);
+                $this->setProperty($model, $field, $type, $nullable);
             }
         }
     }
@@ -292,29 +293,29 @@ class GenerateFactoryCommand extends Command
         }
     }
 
-    protected function setProperty(Model $model, string $field, string $type): void
+    protected function setProperty(Model $model, string $field, string $type, bool $nullable = false ): void
     {
         if ($enumValues = EnumValues::get($model, $field)) {
             $enumValues = implode("', '", $enumValues);
 
-            $this->properties[$field] = $this->fakerPrefix("randomElement(['$enumValues'])");
+            $this->properties[$field] = $this->fakerPrefix("randomElement(['$enumValues'])", $nullable);
 
             return;
         }
 
-        if ($property = $this->mapByName($field)) {
+        if ($property = $this->mapByName($field, $nullable)) {
             $this->properties[$field] = $property;
 
             return;
         }
 
-        if ($property = $this->mapByType($type)) {
+        if ($property = $this->mapByType($type, $nullable)) {
             $this->properties[$field] = $property;
 
             return;
         }
 
-        $this->properties[$field] = $this->mapByType('string');
+        $this->properties[$field] = $this->mapByType('string', $nullable);
     }
 
     protected function createFactory(ReflectionClass $reflection): string
@@ -339,11 +340,11 @@ class GenerateFactoryCommand extends Command
         return "\\$class::factory()";
     }
 
-    protected function fakerPrefix(string $type): string
+    protected function fakerPrefix(string $type, bool $nullable = false): string
     {
         return version_compare($this->laravel->version(), '9.18.0', '>=')
-            ? "fake()->$type"
-            : "\$this->faker->$type";
+            ? (!$nullable ? "fake()->$type" : "fake()->optional()->$type")
+            : (!$nullable ? "\$this->faker->$type" : "\$this->faker->optional()->$type");
     }
 
     protected function isFieldFakeable(string $field, Model $model): bool
@@ -353,98 +354,98 @@ class GenerateFactoryCommand extends Command
             && ! (method_exists($model, 'getDeletedAtColumn') && $field === $model->getDeletedAtColumn());
     }
 
-    protected function mapByName(string $field): ?string
+    protected function mapByName(string $field, bool $nullable = false): ?string
     {
         $fakeableNames = [
-            'language' => $this->fakerPrefix('languageCode'),
-            'lang' => $this->fakerPrefix('languageCode'),
-            'locale' => $this->fakerPrefix('locale'),
-            'city' => $this->fakerPrefix('city'),
-            'town' => $this->fakerPrefix('city'),
-            'town_city' => $this->fakerPrefix('city'),
-            'state' => $this->fakerPrefix('state'),
-            'region' => $this->fakerPrefix('state'),
-            'region_state' => $this->fakerPrefix('state'),
-            'company' => $this->fakerPrefix('company'),
-            'country' => $this->fakerPrefix('country'),
-            'description' => $this->fakerPrefix('text'),
-            'email' => $this->fakerPrefix('safeEmail'),
-            'email_address' => $this->fakerPrefix('safeEmail'),
-            'first_name' => $this->fakerPrefix('firstName'),
-            'firstname' => $this->fakerPrefix('firstName'),
-            'last_name' => $this->fakerPrefix('lastName'),
-            'lastname' => $this->fakerPrefix('lastName'),
-            'name' => $this->fakerPrefix('name'),
-            'full_name' => $this->fakerPrefix('name'),
-            'lat' => $this->fakerPrefix('latitude'),
-            'latitude' => $this->fakerPrefix('latitude'),
-            'lng' => $this->fakerPrefix('longitude'),
-            'longitude' => $this->fakerPrefix('longitude'),
-            'password' => "bcrypt({$this->fakerPrefix('password')})",
-            'phone' => $this->fakerPrefix('phoneNumber'),
-            'telephone' => $this->fakerPrefix('phoneNumber'),
-            'phone_number' => $this->fakerPrefix('phoneNumber'),
-            'postcode' => $this->fakerPrefix('postcode'),
-            'postal_code' => $this->fakerPrefix('postcode'),
-            'zip' => $this->fakerPrefix('postcode'),
-            'zip_postal_code' => $this->fakerPrefix('postcode'),
-            'slug' => $this->fakerPrefix('slug'),
-            'street' => $this->fakerPrefix('streetName'),
-            'address' => $this->fakerPrefix('address'),
-            'address1' => $this->fakerPrefix('streetAddress'),
-            'address2' => $this->fakerPrefix('secondaryAddress'),
-            'summary' => $this->fakerPrefix('text'),
-            'title' => $this->fakerPrefix('title'),
-            'subject' => $this->fakerPrefix('title'),
-            'note' => $this->fakerPrefix('sentence'),
-            'sentence' => $this->fakerPrefix('sentence'),
-            'url' => $this->fakerPrefix('url'),
-            'link' => $this->fakerPrefix('url'),
-            'href' => $this->fakerPrefix('url'),
-            'domain' => $this->fakerPrefix('domainName'),
-            'user_name' => $this->fakerPrefix('userName'),
-            'username' => $this->fakerPrefix('userName'),
-            'currency' => $this->fakerPrefix('currencyCode'),
-            'guid' => $this->fakerPrefix('uuid'),
-            'uuid' => $this->fakerPrefix('uuid'),
-            'iban' => $this->fakerPrefix('iban()'),
-            'mac' => $this->fakerPrefix('macAddress'),
-            'ip' => $this->fakerPrefix('ipv4'),
-            'ipv4' => $this->fakerPrefix('ipv4'),
-            'ipv6' => $this->fakerPrefix('ipv6'),
-            'request_ip' => $this->fakerPrefix('ipv4'),
-            'user_agent' => $this->fakerPrefix('userAgent'),
-            'request_user_agent' => $this->fakerPrefix('userAgent'),
-            'iso3' => $this->fakerPrefix('countryISOAlpha3'),
-            'hash' => $this->fakerPrefix('sha256'),
-            'sha256' => $this->fakerPrefix('sha256'),
-            'sha256_hash' => $this->fakerPrefix('sha256'),
-            'sha1' => $this->fakerPrefix('sha1'),
-            'sha1_hash' => $this->fakerPrefix('sha1'),
-            'md5' => $this->fakerPrefix('md5'),
-            'md5_hash' => $this->fakerPrefix('md5'),
+            'language' => $this->fakerPrefix('languageCode', $nullable),
+            'lang' => $this->fakerPrefix('languageCode', $nullable),
+            'locale' => $this->fakerPrefix('locale', $nullable),
+            'city' => $this->fakerPrefix('city', $nullable),
+            'town' => $this->fakerPrefix('city', $nullable),
+            'town_city' => $this->fakerPrefix('city', $nullable),
+            'state' => $this->fakerPrefix('state', $nullable),
+            'region' => $this->fakerPrefix('state', $nullable),
+            'region_state' => $this->fakerPrefix('state', $nullable),
+            'company' => $this->fakerPrefix('company', $nullable),
+            'country' => $this->fakerPrefix('country', $nullable),
+            'description' => $this->fakerPrefix('text', $nullable),
+            'email' => $this->fakerPrefix('safeEmail', $nullable),
+            'email_address' => $this->fakerPrefix('safeEmail', $nullable),
+            'first_name' => $this->fakerPrefix('firstName', $nullable),
+            'firstname' => $this->fakerPrefix('firstName', $nullable),
+            'last_name' => $this->fakerPrefix('lastName', $nullable),
+            'lastname' => $this->fakerPrefix('lastName', $nullable),
+            'name' => $this->fakerPrefix('name', $nullable),
+            'full_name' => $this->fakerPrefix('name', $nullable),
+            'lat' => $this->fakerPrefix('latitude', $nullable),
+            'latitude' => $this->fakerPrefix('latitude', $nullable),
+            'lng' => $this->fakerPrefix('longitude', $nullable),
+            'longitude' => $this->fakerPrefix('longitude', $nullable),
+            'password' => "bcrypt({$this->fakerPrefix('password', $nullable)})",
+            'phone' => $this->fakerPrefix('phoneNumber', $nullable),
+            'telephone' => $this->fakerPrefix('phoneNumber', $nullable),
+            'phone_number' => $this->fakerPrefix('phoneNumber', $nullable),
+            'postcode' => $this->fakerPrefix('postcode', $nullable),
+            'postal_code' => $this->fakerPrefix('postcode', $nullable),
+            'zip' => $this->fakerPrefix('postcode', $nullable),
+            'zip_postal_code' => $this->fakerPrefix('postcode', $nullable),
+            'slug' => $this->fakerPrefix('slug', $nullable),
+            'street' => $this->fakerPrefix('streetName', $nullable),
+            'address' => $this->fakerPrefix('address', $nullable),
+            'address1' => $this->fakerPrefix('streetAddress', $nullable),
+            'address2' => $this->fakerPrefix('secondaryAddress', $nullable),
+            'summary' => $this->fakerPrefix('text', $nullable),
+            'title' => $this->fakerPrefix('title', $nullable),
+            'subject' => $this->fakerPrefix('title', $nullable),
+            'note' => $this->fakerPrefix('sentence', $nullable),
+            'sentence' => $this->fakerPrefix('sentence', $nullable),
+            'url' => $this->fakerPrefix('url', $nullable),
+            'link' => $this->fakerPrefix('url', $nullable),
+            'href' => $this->fakerPrefix('url', $nullable),
+            'domain' => $this->fakerPrefix('domainName', $nullable),
+            'user_name' => $this->fakerPrefix('userName', $nullable),
+            'username' => $this->fakerPrefix('userName', $nullable),
+            'currency' => $this->fakerPrefix('currencyCode', $nullable),
+            'guid' => $this->fakerPrefix('uuid', $nullable),
+            'uuid' => $this->fakerPrefix('uuid', $nullable),
+            'iban' => $this->fakerPrefix('iban(, $nullable)', $nullable),
+            'mac' => $this->fakerPrefix('macAddress', $nullable),
+            'ip' => $this->fakerPrefix('ipv4', $nullable),
+            'ipv4' => $this->fakerPrefix('ipv4', $nullable),
+            'ipv6' => $this->fakerPrefix('ipv6', $nullable),
+            'request_ip' => $this->fakerPrefix('ipv4', $nullable),
+            'user_agent' => $this->fakerPrefix('userAgent', $nullable),
+            'request_user_agent' => $this->fakerPrefix('userAgent', $nullable),
+            'iso3' => $this->fakerPrefix('countryISOAlpha3', $nullable),
+            'hash' => $this->fakerPrefix('sha256', $nullable),
+            'sha256' => $this->fakerPrefix('sha256', $nullable),
+            'sha256_hash' => $this->fakerPrefix('sha256', $nullable),
+            'sha1' => $this->fakerPrefix('sha1', $nullable),
+            'sha1_hash' => $this->fakerPrefix('sha1', $nullable),
+            'md5' => $this->fakerPrefix('md5', $nullable),
+            'md5_hash' => $this->fakerPrefix('md5', $nullable),
             'remember_token' => 'Str::random(10)',
         ];
 
         return $fakeableNames[$field] ?? null;
     }
 
-    protected function mapByType(string $field): ?string
+    protected function mapByType(string $field, bool $nullable = false): ?string
     {
         $fakeableTypes = [
-            'string' => $this->fakerPrefix('word'),
-            'text' => $this->fakerPrefix('text'),
-            'date' => $this->fakerPrefix('date()'),
-            'time' => $this->fakerPrefix('time()'),
-            'guid' => $this->fakerPrefix('uuid'),
-            'datetimetz' => $this->fakerPrefix('dateTime()'),
-            'datetime' => $this->fakerPrefix('dateTime()'),
-            'integer' => $this->fakerPrefix('randomNumber()'),
-            'bigint' => $this->fakerPrefix('randomNumber()'),
-            'smallint' => $this->fakerPrefix('randomNumber()'),
-            'decimal' => $this->fakerPrefix('randomFloat()'),
-            'float' => $this->fakerPrefix('randomFloat()'),
-            'boolean' => $this->fakerPrefix('boolean'),
+            'string' => $this->fakerPrefix('word', $nullable),
+            'text' => $this->fakerPrefix('text', $nullable),
+            'date' => $this->fakerPrefix('date()', $nullable),
+            'time' => $this->fakerPrefix('time()', $nullable),
+            'guid' => $this->fakerPrefix('uuid', $nullable),
+            'datetimetz' => $this->fakerPrefix('dateTime()', $nullable),
+            'datetime' => $this->fakerPrefix('dateTime()', $nullable),
+            'integer' => $this->fakerPrefix('randomNumber()', $nullable),
+            'bigint' => $this->fakerPrefix('randomNumber()', $nullable),
+            'smallint' => $this->fakerPrefix('randomNumber()', $nullable),
+            'decimal' => $this->fakerPrefix('randomFloat()', $nullable),
+            'float' => $this->fakerPrefix('randomFloat()', $nullable),
+            'boolean' => $this->fakerPrefix('boolean', $nullable),
         ];
 
         return $fakeableTypes[$field] ?? null;
