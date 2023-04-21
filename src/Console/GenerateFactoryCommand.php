@@ -78,7 +78,7 @@ class GenerateFactoryCommand extends Command
 
         foreach ($models as $model) {
             $class = class_basename($model);
-            $filename = "database/factories/{$class}Factory.php";
+            $filename = database_path("factories/{$class}Factory.php");
 
             $class = $this->generateClassName($model);
 
