@@ -15,10 +15,8 @@ It will allow you to write tests containing your models much faster.
 You can install the package via composer:
 
 ```bash
-composer require thedoctor0/laravel-factory-generator --dev
+composer require thedoctor0/laravel-factory-generator:1.3.2 --dev
 ```
-
-For Laravel 6.x and 7.x check the [v1.2.5](https://github.com/TheDoctor0/laravel-factory-generator/tree/laravel-7).
 
 ## Usage
 
