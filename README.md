@@ -18,6 +18,8 @@ You can install the package via composer:
 composer require thedoctor0/laravel-factory-generator --dev
 ```
 
+For Laravel 8.x and 9.x check the [v1.3.2](https://github.com/TheDoctor0/laravel-factory-generator/tree/laravel-9).
+
 For Laravel 6.x and 7.x check the [v1.2.5](https://github.com/TheDoctor0/laravel-factory-generator/tree/laravel-7).
 
 ## Usage

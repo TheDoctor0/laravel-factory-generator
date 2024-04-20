@@ -19,7 +19,7 @@ class EnumPgsql extends EnumDriver
         ");
 
         $type = DB::connection($this->connection)
-            ->select(is_string($query) ? $query : $query->getValue(DB::connection()->getQueryGrammar()));
+            ->select($query->getValue(DB::connection()->getQueryGrammar()));
 
         if (! count($type)) {
             return null;

@@ -25,6 +25,10 @@ class EnumValues
             return (new EnumPgsql($model, $field))->values();
         }
 
+        if ($driver === 'sqlite') {
+            return (new EnumSqlite($model, $field))->values();
+        }
+
         return null;
     }
 }

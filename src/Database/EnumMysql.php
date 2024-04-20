@@ -16,7 +16,7 @@ class EnumMysql extends EnumDriver
         ");
 
         $type = DB::connection($this->connection)
-            ->select(is_string($query) ? $query : $query->getValue(DB::connection()->getQueryGrammar()));
+            ->select($query->getValue(DB::connection()->getQueryGrammar()));
 
         preg_match_all("/'([^']+)'/", $type[0]->Type, $matches);
 

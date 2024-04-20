@@ -14,8 +14,8 @@ use Doctrine\DBAL\Types\Type;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Contracts\View\Factory;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Eloquent\Model;
-use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -38,10 +38,6 @@ class GenerateFactoryCommand extends Command
      */
     protected $description = 'Generate test factories for models';
 
-    protected Filesystem $files;
-
-    protected Factory $view;
-
     protected string $dir;
 
     protected ?string $namespace;
@@ -52,19 +48,26 @@ class GenerateFactoryCommand extends Command
 
     protected array $properties = [];
 
-    /**
-     * @throws \Doctrine\DBAL\DBALException
-     */
-    public function __construct(Filesystem $files, Factory $view)
+    public function __construct(public Filesystem $files, public Factory $view)
     {
         parent::__construct();
+    }
 
-        $this->files = $files;
-        $this->view = $view;
+    protected function getArguments(): array
+    {
+        return [
+            ['model', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'Which models to include', []],
+        ];
+    }
 
-        if (! Type::hasType('customEnum')) {
-            Type::addType('customEnum', EnumType::class);
-        }
+    protected function getOptions(): array
+    {
+        return [
+            ['dir', 'D', InputOption::VALUE_OPTIONAL, 'The model directory'],
+            ['force', 'F', InputOption::VALUE_NONE, 'Overwrite any existing model factory'],
+            ['namespace', 'N', InputOption::VALUE_OPTIONAL, 'Model Namespace'],
+            ['recursive', 'R', InputOption::VALUE_NONE, 'Generate model factory recursively']
+        ];
     }
 
     public function handle(): void
@@ -105,23 +108,6 @@ class GenerateFactoryCommand extends Command
                 $this->info("Model factory created: $filename");
             }
         }
-    }
-
-    protected function getArguments(): array
-    {
-        return [
-            ['model', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'Which models to include', []],
-        ];
-    }
-
-    protected function getOptions(): array
-    {
-        return [
-            ['dir', 'D', InputOption::VALUE_OPTIONAL, 'The model directory'],
-            ['force', 'F', InputOption::VALUE_NONE, 'Overwrite any existing model factory'],
-            ['namespace', 'N', InputOption::VALUE_OPTIONAL, 'Model Namespace'],
-            ['recursive', 'R', InputOption::VALUE_NONE, 'Generate model factory recursively']
-        ];
     }
 
     protected function generateFactory(string $model): ?string
@@ -198,51 +184,26 @@ class GenerateFactoryCommand extends Command
         }, $this->files->allFiles($this->dir));
     }
 
-    /**
-     * @throws \Doctrine\DBAL\DBALException
-     */
     protected function getPropertiesFromTable(Model $model): void
     {
         $table = $model->getConnection()->getTablePrefix() . $model->getTable();
-
-        try {
-            $schema = $model->getConnection()->getDoctrineSchemaManager();
-        } catch (Exception $exception) {
-            $class = get_class($model);
-            $driver = $model->getConnection()->getDriverName();
-
-            if (in_array($driver, ['mysql', 'pgsql', 'sqlite'])) {
-                $this->error("Database driver ($driver) for $class model is not configured properly!");
-            } else {
-                $this->warn("Database driver ($driver) for $class model is not supported.");
-            }
-
-            return;
-        }
-
         $database = null;
 
         if (Str::contains($table, '.')) {
             [$database, $table] = explode('.', $table);
         }
 
-        $this->registerCustomTypes($schema);
-
-        $columns = $schema->listTableColumns($table, $database);
+        $schema = Schema::connection($database);
+        $columns = $schema->getColumns($table);
 
         if (! $columns) {
             return;
         }
 
         foreach ($columns as $column) {
-            $field = $column->getName();
-            $nullable = !$column->getNotnull();
-
-            if (in_array($field, $model->getDates(), true)) {
-                $type = 'datetime';
-            } else {
-                $type = $column->getType()->getName();
-            }
+            $field = $column['name'];
+            $nullable = $column['nullable'];
+            $type = $column['type_name'];
 
             if ($this->isFieldFakeable($field, $model)) {
                 $this->setProperty($model, $field, $type, $nullable);
@@ -293,7 +254,7 @@ class GenerateFactoryCommand extends Command
         }
     }
 
-    protected function setProperty(Model $model, string $field, string $type, bool $nullable = false ): void
+    protected function setProperty(Model $model, string $field, string $type, bool $nullable = false): void
     {
         if ($enumValues = EnumValues::get($model, $field)) {
             $enumValues = implode("', '", $enumValues);
@@ -342,9 +303,7 @@ class GenerateFactoryCommand extends Command
 
     protected function fakerPrefix(string $type, bool $nullable = false): string
     {
-        return version_compare($this->laravel->version(), '9.18.0', '>=')
-            ? (!$nullable ? "fake()->$type" : "fake()->optional()->$type")
-            : (!$nullable ? "\$this->faker->$type" : "\$this->faker->optional()->$type");
+        return !$nullable ? "fake()->$type" : "fake()->optional()->$type";
     }
 
     protected function isFieldFakeable(string $field, Model $model): bool
@@ -454,26 +413,6 @@ class GenerateFactoryCommand extends Command
     protected function formatPath(string ...$paths): string
     {
         return implode(DIRECTORY_SEPARATOR, $paths);
-    }
-
-    /**
-     * @throws \Doctrine\DBAL\DBALException
-     */
-    protected function registerCustomTypes(AbstractSchemaManager $schema): void
-    {
-        $platform = $schema->getDatabasePlatform();
-
-        if (! $platform) {
-            return;
-        }
-
-        $platform->registerDoctrineTypeMapping('enum', 'customEnum');
-        $platformName = $platform->getName();
-        $customTypes = $this->laravel['config']->get("ide-helper.custom_db_types.$platformName", []);
-
-        foreach ($customTypes as $typeName => $doctrineTypeName) {
-            $platform->registerDoctrineTypeMapping($typeName, $doctrineTypeName);
-        }
     }
 
     protected function getFileStructureDiff(string $class): array
