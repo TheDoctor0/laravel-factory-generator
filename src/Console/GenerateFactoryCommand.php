@@ -396,6 +396,7 @@ class GenerateFactoryCommand extends Command
             'text' => $this->fakerPrefix('text', $nullable),
             'date' => $this->fakerPrefix('date()', $nullable),
             'time' => $this->fakerPrefix('time()', $nullable),
+            'timestamp' => $this->fakerPrefix('datetime()', $nullable),
             'guid' => $this->fakerPrefix('uuid', $nullable),
             'datetimetz' => $this->fakerPrefix('dateTime()', $nullable),
             'datetime' => $this->fakerPrefix('dateTime()', $nullable),
