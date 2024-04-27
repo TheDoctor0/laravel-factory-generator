@@ -402,6 +402,7 @@ class GenerateFactoryCommand extends Command
             'integer' => $this->fakerPrefix('randomNumber()', $nullable),
             'bigint' => $this->fakerPrefix('randomNumber()', $nullable),
             'smallint' => $this->fakerPrefix('randomNumber()', $nullable),
+            'tinyint' => $this->fakerPrefix('randomNumber(1)', $nullable),
             'decimal' => $this->fakerPrefix('randomFloat()', $nullable),
             'float' => $this->fakerPrefix('randomFloat()', $nullable),
             'boolean' => $this->fakerPrefix('boolean', $nullable),
