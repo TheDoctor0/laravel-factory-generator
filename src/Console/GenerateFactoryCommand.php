@@ -400,6 +400,7 @@ class GenerateFactoryCommand extends Command
             'datetimetz' => $this->fakerPrefix('dateTime()', $nullable),
             'datetime' => $this->fakerPrefix('dateTime()', $nullable),
             'integer' => $this->fakerPrefix('randomNumber()', $nullable),
+            'int' => $this->fakerPrefix('randomNumber()', $nullable),
             'bigint' => $this->fakerPrefix('randomNumber()', $nullable),
             'smallint' => $this->fakerPrefix('randomNumber()', $nullable),
             'decimal' => $this->fakerPrefix('randomFloat()', $nullable),
