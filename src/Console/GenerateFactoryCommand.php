@@ -206,7 +206,7 @@ class GenerateFactoryCommand extends Command
             $type = $column['type_name'];
 
             if ($this->isFieldFakeable($field, $model)) {
-                $this->setProperty($model, $field, $type, $nullable);
+                $this->setProperty($model, $field, $type, $column, $nullable);
             }
         }
     }
@@ -254,8 +254,21 @@ class GenerateFactoryCommand extends Command
         }
     }
 
-    protected function setProperty(Model $model, string $field, string $type, bool $nullable = false): void
+    protected function setProperty(Model $model, string $field, string $type, array $column, bool $nullable = false): void
     {
+        if ($type === 'decimal') {
+            $pattern = '/decimal\((?P<integer_digits>\d+),(?P<decimal_digits>\d+)\)/';
+            if (preg_match($pattern, $column['type'], $matches)) {
+                $integerDigits = $matches['integer_digits'];
+                $decimalDigits = $matches['decimal_digits'];
+            }
+
+            $maxNumber = pow(10, $integerDigits - $decimalDigits) - 1;
+            $this->properties[$field] = $this->fakerPrefix("randomFloat($decimalDigits, 0, $maxNumber)", $nullable);
+
+            return;
+        }
+        
         if ($enumValues = EnumValues::get($model, $field)) {
             $enumValues = implode("', '", $enumValues);
 
@@ -405,7 +418,6 @@ class GenerateFactoryCommand extends Command
             'bigint' => $this->fakerPrefix('randomNumber()', $nullable),
             'smallint' => $this->fakerPrefix('randomNumber()', $nullable),
             'tinyint' => $this->fakerPrefix('randomNumber(1)', $nullable),
-            'decimal' => $this->fakerPrefix('randomFloat()', $nullable),
             'float' => $this->fakerPrefix('randomFloat()', $nullable),
             'boolean' => $this->fakerPrefix('boolean', $nullable),
         ];
