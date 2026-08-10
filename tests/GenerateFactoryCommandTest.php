@@ -192,8 +192,6 @@ class GenerateFactoryCommandTest extends TestCase
     #[Test]
     public function it_maps_decimal_columns_even_when_precision_is_not_reported(): void
     {
-        // e.g. PostgreSQL reports "numeric(8,2)" and some drivers report a bare
-        // "decimal" - the precision regex then does not match.
         $this->assertSame(
             'fake()->randomFloat(2, 0, 999999)',
             $this->mapDecimalColumn('decimal')

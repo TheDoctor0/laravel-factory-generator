@@ -16,10 +16,6 @@ class Customer extends Model
         return $this->belongsTo(Country::class);
     }
 
-    /**
-     * A relation-like method with a required parameter must not be invoked
-     * by the generator - it cannot know what to pass.
-     */
     public function related(string $model): BelongsTo
     {
         return $this->belongsTo($model);
