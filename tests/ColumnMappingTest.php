@@ -79,8 +79,8 @@ class ColumnMappingTest extends TestCase
             ['address1', 'fake()->streetAddress'],
             ['address2', 'fake()->secondaryAddress'],
             ['summary', 'fake()->text'],
-            ['title', 'fake()->title'],
-            ['subject', 'fake()->title'],
+            ['title', 'fake()->sentence(4)'],
+            ['subject', 'fake()->sentence(4)'],
             ['note', 'fake()->sentence'],
             ['sentence', 'fake()->sentence'],
             ['url', 'fake()->url'],
@@ -119,7 +119,7 @@ class ColumnMappingTest extends TestCase
             ['text', 'fake()->text'],
             ['date', 'fake()->date()'],
             ['time', 'fake()->time()'],
-            ['timestamp', 'fake()->datetime()'],
+            ['timestamp', 'fake()->dateTime()'],
             ['guid', 'fake()->uuid'],
             ['datetimetz', 'fake()->dateTime()'],
             ['datetime', 'fake()->dateTime()'],
@@ -168,7 +168,7 @@ class ColumnMappingTest extends TestCase
 
         $contents = file_get_contents($this->app->databasePath('factories/PostFactory.php'));
 
-        $this->assertStringContainsString("'title' => fake()->title", $contents);
+        $this->assertStringContainsString("'title' => fake()->sentence(4)", $contents);
         $this->assertStringContainsString("'body' => fake()->word", $contents);
         $this->assertStringContainsString("'content' => fake()->text", $contents);
         $this->assertStringContainsString("'published_on' => fake()->date()", $contents);

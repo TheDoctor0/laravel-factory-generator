@@ -65,7 +65,7 @@ class EnumDriversTest extends TestCase
 
         $this->fakeConnection($rows, function ($sql): void {
             $this->assertStringContainsString('SHOW COLUMNS FROM `customers`', $sql);
-            $this->assertStringContainsString("Field = 'status'", $sql);
+            $this->assertStringContainsString('Field = ?', $sql);
         });
 
         $this->assertSame(
@@ -88,14 +88,30 @@ class EnumDriversTest extends TestCase
         $rows = [(object) ['matches' => 'active'], (object) ['matches' => 'inactive']];
 
         $this->fakeConnection($rows, function ($sql): void {
-            $this->assertStringContainsString("conname = 'customers_status_check'", $sql);
-            $this->assertStringContainsString("conrelid = 'public.customers'::regclass", $sql);
+            $this->assertStringContainsString('conname = ?', $sql);
+            $this->assertStringContainsString('conrelid = ?::regclass', $sql);
         });
 
         $this->assertSame(
             ['active', 'inactive'],
             (new EnumPgsql(new Customer(), 'status'))->values()
         );
+    }
+
+    #[Test]
+    public function mysql_driver_returns_null_when_the_column_is_missing(): void
+    {
+        $this->fakeConnection([]);
+
+        $this->assertNull((new EnumMysql(new Customer(), 'missing'))->values());
+    }
+
+    #[Test]
+    public function sqlite_driver_returns_null_when_the_table_is_unknown(): void
+    {
+        $this->fakeConnection([]);
+
+        $this->assertNull((new EnumSqlite(new Customer(), 'status'))->values());
     }
 
     #[Test]
