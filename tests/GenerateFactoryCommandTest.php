@@ -36,6 +36,19 @@ class GenerateFactoryCommandTest extends TestCase
         });
 
         File::deleteDirectory($this->app->databasePath('factories'));
+        File::deleteDirectory(getcwd() . '/database');
+    }
+
+    #[Test]
+    public function it_writes_recursive_factories_into_the_database_path(): void
+    {
+        $this->artisan('generate:factory', [
+            'model' => [Customer::class],
+            '--recursive' => true,
+        ])->assertExitCode(0);
+
+        $this->assertFileExists($this->generatedFactoryPath('CustomerFactory.php'));
+        $this->assertDirectoryDoesNotExist(getcwd() . '/database');
     }
 
     #[Test]

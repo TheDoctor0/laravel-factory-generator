@@ -464,7 +464,7 @@ class GenerateFactoryCommand extends Command
 
     protected function generateRecursiveFileName(string $class): string
     {
-        return 'database/factories/' . implode('/', $this->getFileStructureDiff($class)) . 'Factory.php';
+        return database_path('factories/' . implode('/', $this->getFileStructureDiff($class)) . 'Factory.php');
     }
 
     protected function generateClassName(string $model): string
@@ -496,7 +496,7 @@ class GenerateFactoryCommand extends Command
 
         try {
             $reflection = new ReflectionClass($class);
-            $dir = 'database/factories' . str_replace('\\', '/', $this->generateAdditionalNameSpace($class));
+            $dir = database_path('factories' . str_replace('\\', '/', $this->generateAdditionalNameSpace($class)));
 
             if (! file_exists($dir) && $this->isInstantiableModelClass($reflection)) {
                 mkdir($dir, $permission, true);
