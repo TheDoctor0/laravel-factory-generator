@@ -261,6 +261,10 @@ class GenerateFactoryCommand extends Command
                 continue;
             }
 
+            if ($reflection->getNumberOfRequiredParameters() > 0) {
+                continue;
+            }
+
             /** @var \Illuminate\Database\Eloquent\Relations\BelongsTo $relationObject */
             $relationObject = $model->$method();
 

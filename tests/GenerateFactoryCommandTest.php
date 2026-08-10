@@ -19,8 +19,15 @@ class GenerateFactoryCommandTest extends TestCase
     {
         parent::setUp();
 
+        Schema::create('countries', function (Blueprint $table): void {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+        });
+
         Schema::create('customers', function (Blueprint $table): void {
             $table->id();
+            $table->foreignId('country_id');
             $table->string('name');
             $table->string('email')->unique();
             $table->string('city')->nullable();
@@ -153,6 +160,20 @@ class GenerateFactoryCommandTest extends TestCase
         $this->assertStringContainsString("'iban' => fake()->iban()", $contents);
         $this->assertStringNotContainsString('iban(, $nullable)', $contents);
         $this->assertNotFalse(token_get_all($contents, TOKEN_PARSE));
+    }
+
+    #[Test]
+    public function it_detects_belongs_to_relations_without_invoking_parameterized_methods(): void
+    {
+        $this->artisan('generate:factory', ['model' => [Customer::class]])
+            ->assertExitCode(0);
+
+        $contents = file_get_contents($this->generatedFactoryPath('CustomerFactory.php'));
+
+        $this->assertStringContainsString(
+            "'country_id' => \\TheDoctor0\\LaravelFactoryGenerator\\Tests\\Fixtures\\Country::factory()",
+            $contents
+        );
     }
 
     #[Test]
