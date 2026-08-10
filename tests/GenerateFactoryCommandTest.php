@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\Test;
 use TheDoctor0\LaravelFactoryGenerator\Tests\Fixtures\Customer;
+use TheDoctor0\LaravelFactoryGenerator\Tests\Fixtures\Order;
 use TheDoctor0\LaravelFactoryGenerator\Tests\Fixtures\Post;
 use TheDoctor0\LaravelFactoryGenerator\Tests\Fixtures\Ticket;
 
@@ -94,6 +95,50 @@ class GenerateFactoryCommandTest extends TestCase
         $this->assertStringContainsString("'title' => fake()->sentence(4)", $contents);
         $this->assertStringContainsString("'subject' => fake()->optional()->sentence(4)", $contents);
         $this->assertStringNotContainsString('fake()->title', $contents);
+    }
+
+    #[Test]
+    public function it_maps_belongs_to_relations_to_related_factories(): void
+    {
+        Schema::create('orders', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('customer_id');
+            $table->string('number');
+        });
+
+        $this->artisan('generate:factory', ['model' => [Order::class]])
+            ->assertExitCode(0);
+
+        $contents = $this->factoryContents('OrderFactory.php');
+
+        $this->assertStringContainsString(
+            "'customer_id' => \\" . Customer::class . '::factory()',
+            $contents
+        );
+    }
+
+    #[Test]
+    public function it_does_not_overwrite_an_existing_factory_without_force(): void
+    {
+        File::ensureDirectoryExists($this->app->databasePath('factories'));
+        File::put($this->app->databasePath('factories/CustomerFactory.php'), 'original');
+
+        $this->artisan('generate:factory', ['model' => [Customer::class]])
+            ->expectsOutputToContain('Model factory exists, use --force to overwrite')
+            ->assertExitCode(0);
+
+        $this->assertSame(
+            'original',
+            File::get($this->app->databasePath('factories/CustomerFactory.php'))
+        );
+
+        $this->artisan('generate:factory', ['model' => [Customer::class], '--force' => true])
+            ->assertExitCode(0);
+
+        $this->assertStringContainsString(
+            'extends Factory',
+            File::get($this->app->databasePath('factories/CustomerFactory.php'))
+        );
     }
 
     protected function factoryContents(string $filename): string
