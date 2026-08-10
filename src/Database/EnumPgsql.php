@@ -10,16 +10,13 @@ class EnumPgsql extends EnumDriver
 {
     public function values(): ?array
     {
-        $query = DB::raw("
+        $type = DB::connection($this->connection)->select("
             SELECT matches[1]
             FROM pg_constraint, regexp_matches(pg_get_constraintdef(\"oid\"), '''(.+?)''', 'g') matches
             WHERE contype = 'c'
-                AND conname = '{$this->table}_{$this->field}_check'
-                AND conrelid = 'public.{$this->table}'::regclass;
-        ");
-
-        $type = DB::connection($this->connection)
-            ->select($query->getValue(DB::connection()->getQueryGrammar()));
+                AND conname = ?
+                AND conrelid = ?::regclass;
+        ", ["{$this->table}_{$this->field}_check", "public.{$this->table}"]);
 
         if (! count($type)) {
             return null;

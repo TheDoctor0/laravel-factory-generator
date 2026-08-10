@@ -46,6 +46,8 @@ class GenerateFactoryCommand extends Command
 
     protected bool $recursive;
 
+    protected bool $dryRun;
+
     protected array $properties = [];
 
     public function __construct(public Filesystem $files, public Factory $view)
@@ -66,7 +68,8 @@ class GenerateFactoryCommand extends Command
             ['dir', 'D', InputOption::VALUE_OPTIONAL, 'The model directory'],
             ['force', 'F', InputOption::VALUE_NONE, 'Overwrite any existing model factory'],
             ['namespace', 'N', InputOption::VALUE_OPTIONAL, 'Model Namespace'],
-            ['recursive', 'R', InputOption::VALUE_NONE, 'Generate model factory recursively']
+            ['recursive', 'R', InputOption::VALUE_NONE, 'Generate model factory recursively'],
+            ['dry-run', null, InputOption::VALUE_NONE, 'Print generated factories instead of writing them to disk']
         ];
     }
 
@@ -76,6 +79,7 @@ class GenerateFactoryCommand extends Command
         $this->namespace = $this->option('namespace');
         $this->force = $this->option('force');
         $this->recursive = $this->option('recursive');
+        $this->dryRun = $this->option('dry-run');
 
         $models = $this->loadModels($this->argument('model'));
 
@@ -87,7 +91,19 @@ class GenerateFactoryCommand extends Command
 
             if ($this->recursive) {
                 $filename = $this->generateRecursiveFileName($class);
-                $this->makeDirRecursively($class);
+
+                if (! $this->dryRun) {
+                    $this->makeDirRecursively($class);
+                }
+            }
+
+            if ($this->dryRun) {
+                if ($content = $this->generateFactory($class)) {
+                    $this->info("Model factory preview: $filename");
+                    $this->line($content);
+                }
+
+                continue;
             }
 
             if (! $this->force && $this->files->exists($filename)) {
@@ -369,8 +385,8 @@ class GenerateFactoryCommand extends Command
             'address1' => $this->fakerPrefix('streetAddress', $nullable),
             'address2' => $this->fakerPrefix('secondaryAddress', $nullable),
             'summary' => $this->fakerPrefix('text', $nullable),
-            'title' => $this->fakerPrefix('title', $nullable),
-            'subject' => $this->fakerPrefix('title', $nullable),
+            'title' => $this->fakerPrefix('sentence(4)', $nullable),
+            'subject' => $this->fakerPrefix('sentence(4)', $nullable),
             'note' => $this->fakerPrefix('sentence', $nullable),
             'sentence' => $this->fakerPrefix('sentence', $nullable),
             'url' => $this->fakerPrefix('url', $nullable),
@@ -411,7 +427,7 @@ class GenerateFactoryCommand extends Command
             'text' => $this->fakerPrefix('text', $nullable),
             'date' => $this->fakerPrefix('date()', $nullable),
             'time' => $this->fakerPrefix('time()', $nullable),
-            'timestamp' => $this->fakerPrefix('datetime()', $nullable),
+            'timestamp' => $this->fakerPrefix('dateTime()', $nullable),
             'guid' => $this->fakerPrefix('uuid', $nullable),
             'datetimetz' => $this->fakerPrefix('dateTime()', $nullable),
             'datetime' => $this->fakerPrefix('dateTime()', $nullable),

@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\Test;
 use TheDoctor0\LaravelFactoryGenerator\Tests\Fixtures\Customer;
+use TheDoctor0\LaravelFactoryGenerator\Tests\Fixtures\Order;
+use TheDoctor0\LaravelFactoryGenerator\Tests\Fixtures\Post;
+use TheDoctor0\LaravelFactoryGenerator\Tests\Fixtures\Ticket;
 
 class GenerateFactoryCommandTest extends TestCase
 {
@@ -33,17 +36,118 @@ class GenerateFactoryCommandTest extends TestCase
         $this->artisan('generate:factory', ['model' => [Customer::class]])
             ->assertExitCode(0);
 
-        $factory = collect(File::allFiles($this->app->databasePath('factories')))
-            ->first(fn ($f) => str_ends_with($f->getFilename(), 'CustomerFactory.php'));
-
-        $this->assertNotNull($factory, 'No CustomerFactory.php was generated');
-
-        $contents = file_get_contents($factory->getPathname());
+        $contents = $this->factoryContents('CustomerFactory.php');
 
         $this->assertStringContainsString('extends Factory', $contents);
         $this->assertStringContainsString("'name' => fake()->name", $contents);
         $this->assertStringContainsString("'email' => fake()->safeEmail", $contents);
         $this->assertStringContainsString('fake()->optional()', $contents);
         $this->assertStringContainsString('public function definition(): array', $contents);
+    }
+
+    #[Test]
+    public function it_maps_enum_columns_to_random_element(): void
+    {
+        Schema::create('tickets', function (Blueprint $table): void {
+            $table->id();
+            $table->enum('status', ['open', 'closed', 'pending']);
+        });
+
+        $this->artisan('generate:factory', ['model' => [Ticket::class]])
+            ->assertExitCode(0);
+
+        $contents = $this->factoryContents('TicketFactory.php');
+
+        $this->assertStringContainsString(
+            "'status' => fake()->randomElement(['open', 'closed', 'pending'])",
+            $contents
+        );
+    }
+
+    #[Test]
+    public function it_prints_the_factory_without_writing_files_in_dry_run_mode(): void
+    {
+        $this->artisan('generate:factory', ['model' => [Customer::class], '--dry-run' => true])
+            ->expectsOutputToContain('Model factory preview:')
+            ->expectsOutputToContain('public function definition(): array')
+            ->assertExitCode(0);
+
+        $this->assertFalse(
+            File::isDirectory($this->app->databasePath('factories')),
+            'Dry run must not write any factory files'
+        );
+    }
+
+    #[Test]
+    public function it_maps_title_columns_to_a_non_deprecated_faker_method(): void
+    {
+        Schema::create('posts', function (Blueprint $table): void {
+            $table->id();
+            $table->string('title');
+            $table->string('subject')->nullable();
+        });
+
+        $this->artisan('generate:factory', ['model' => [Post::class]])
+            ->assertExitCode(0);
+
+        $contents = $this->factoryContents('PostFactory.php');
+
+        $this->assertStringContainsString("'title' => fake()->sentence(4)", $contents);
+        $this->assertStringContainsString("'subject' => fake()->optional()->sentence(4)", $contents);
+        $this->assertStringNotContainsString('fake()->title', $contents);
+    }
+
+    #[Test]
+    public function it_maps_belongs_to_relations_to_related_factories(): void
+    {
+        Schema::create('orders', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('customer_id');
+            $table->string('number');
+        });
+
+        $this->artisan('generate:factory', ['model' => [Order::class]])
+            ->assertExitCode(0);
+
+        $contents = $this->factoryContents('OrderFactory.php');
+
+        $this->assertStringContainsString(
+            "'customer_id' => \\" . Customer::class . '::factory()',
+            $contents
+        );
+    }
+
+    #[Test]
+    public function it_does_not_overwrite_an_existing_factory_without_force(): void
+    {
+        File::ensureDirectoryExists($this->app->databasePath('factories'));
+        File::put($this->app->databasePath('factories/CustomerFactory.php'), 'original');
+
+        $this->artisan('generate:factory', ['model' => [Customer::class]])
+            ->expectsOutputToContain('Model factory exists, use --force to overwrite')
+            ->assertExitCode(0);
+
+        $this->assertSame(
+            'original',
+            File::get($this->app->databasePath('factories/CustomerFactory.php'))
+        );
+
+        $this->artisan('generate:factory', ['model' => [Customer::class], '--force' => true])
+            ->assertExitCode(0);
+
+        $this->assertStringContainsString(
+            'extends Factory',
+            File::get($this->app->databasePath('factories/CustomerFactory.php'))
+        );
+    }
+
+    protected function factoryContents(string $filename): string
+    {
+        $factory = collect(File::allFiles($this->app->databasePath('factories')))
+            ->first(fn ($f) => str_ends_with($f->getFilename(), $filename));
+
+        $this->assertNotNull($factory, "No $filename was generated");
+
+        return file_get_contents($factory->getPathname());
     }
 }
