@@ -224,11 +224,16 @@ class GenerateFactoryCommandTest extends TestCase
 
     protected function factoryContents(string $filename): string
     {
+        return file_get_contents($this->generatedFactoryPath($filename));
+    }
+
+    protected function generatedFactoryPath(string $filename): string
+    {
         $factory = collect(File::allFiles($this->app->databasePath('factories')))
             ->first(fn ($f) => str_ends_with($f->getFilename(), $filename));
 
         $this->assertNotNull($factory, "No $filename was generated");
 
-        return file_get_contents($factory->getPathname());
+        return $factory->getPathname();
     }
 }
