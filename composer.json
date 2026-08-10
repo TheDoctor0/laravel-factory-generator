@@ -26,5 +26,17 @@
                 "TheDoctor0\\LaravelFactoryGenerator\\FactoryGeneratorServiceProvider"
             ]
         }
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
+        "phpunit/phpunit": "^10.5|^11.5|^12.0"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "TheDoctor0\\LaravelFactoryGenerator\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit"
     }
 }
