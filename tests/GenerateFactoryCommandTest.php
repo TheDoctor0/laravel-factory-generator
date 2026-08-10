@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\Test;
 use TheDoctor0\LaravelFactoryGenerator\Tests\Fixtures\Customer;
+use TheDoctor0\LaravelFactoryGenerator\Tests\Fixtures\Post;
 use TheDoctor0\LaravelFactoryGenerator\Tests\Fixtures\Ticket;
 
 class GenerateFactoryCommandTest extends TestCase
@@ -74,6 +75,25 @@ class GenerateFactoryCommandTest extends TestCase
             File::isDirectory($this->app->databasePath('factories')),
             'Dry run must not write any factory files'
         );
+    }
+
+    #[Test]
+    public function it_maps_title_columns_to_a_non_deprecated_faker_method(): void
+    {
+        Schema::create('posts', function (Blueprint $table): void {
+            $table->id();
+            $table->string('title');
+            $table->string('subject')->nullable();
+        });
+
+        $this->artisan('generate:factory', ['model' => [Post::class]])
+            ->assertExitCode(0);
+
+        $contents = $this->factoryContents('PostFactory.php');
+
+        $this->assertStringContainsString("'title' => fake()->sentence(4)", $contents);
+        $this->assertStringContainsString("'subject' => fake()->optional()->sentence(4)", $contents);
+        $this->assertStringNotContainsString('fake()->title', $contents);
     }
 
     protected function factoryContents(string $filename): string
