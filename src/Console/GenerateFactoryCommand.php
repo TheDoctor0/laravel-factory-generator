@@ -275,10 +275,13 @@ class GenerateFactoryCommand extends Command
     protected function setProperty(Model $model, string $field, string $type, array $column, bool $nullable = false): void
     {
         if ($type === 'decimal') {
+            $integerDigits = 8;
+            $decimalDigits = 2;
+
             $pattern = '/decimal\((?P<integer_digits>\d+),(?P<decimal_digits>\d+)\)/';
             if (preg_match($pattern, $column['type'], $matches)) {
-                $integerDigits = $matches['integer_digits'];
-                $decimalDigits = $matches['decimal_digits'];
+                $integerDigits = (int) $matches['integer_digits'];
+                $decimalDigits = (int) $matches['decimal_digits'];
             }
 
             $maxNumber = pow(10, $integerDigits - $decimalDigits) - 1;

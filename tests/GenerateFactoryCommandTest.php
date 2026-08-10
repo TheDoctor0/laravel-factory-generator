@@ -155,6 +155,39 @@ class GenerateFactoryCommandTest extends TestCase
         $this->assertNotFalse(token_get_all($contents, TOKEN_PARSE));
     }
 
+    #[Test]
+    public function it_maps_decimal_columns_even_when_precision_is_not_reported(): void
+    {
+        // e.g. PostgreSQL reports "numeric(8,2)" and some drivers report a bare
+        // "decimal" - the precision regex then does not match.
+        $this->assertSame(
+            'fake()->randomFloat(2, 0, 999999)',
+            $this->mapDecimalColumn('decimal')
+        );
+
+        $this->assertSame(
+            'fake()->randomFloat(2, 0, 9999)',
+            $this->mapDecimalColumn('decimal(6,2)')
+        );
+    }
+
+    protected function mapDecimalColumn(string $fullType): string
+    {
+        $command = $this->app->make(\TheDoctor0\LaravelFactoryGenerator\Console\GenerateFactoryCommand::class);
+
+        $setProperty = new \ReflectionMethod($command, 'setProperty');
+        $setProperty->invoke($command, new Customer(), 'price', 'decimal', [
+            'name' => 'price',
+            'type' => $fullType,
+            'type_name' => 'decimal',
+            'nullable' => false,
+        ], false);
+
+        $properties = new \ReflectionProperty($command, 'properties');
+
+        return $properties->getValue($command)['price'];
+    }
+
     protected function factoryContents(string $filename): string
     {
         $factory = collect(File::allFiles($this->app->databasePath('factories')))
