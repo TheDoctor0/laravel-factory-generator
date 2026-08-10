@@ -19,15 +19,36 @@ class GenerateFactoryCommandTest extends TestCase
     {
         parent::setUp();
 
+        Schema::create('countries', function (Blueprint $table): void {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+        });
+
         Schema::create('customers', function (Blueprint $table): void {
             $table->id();
+            $table->foreignId('country_id');
             $table->string('name');
             $table->string('email')->unique();
             $table->string('city')->nullable();
+            $table->string('iban');
             $table->timestamps();
         });
 
         File::deleteDirectory($this->app->databasePath('factories'));
+        File::deleteDirectory(getcwd() . '/database');
+    }
+
+    #[Test]
+    public function it_writes_recursive_factories_into_the_database_path(): void
+    {
+        $this->artisan('generate:factory', [
+            'model' => [Customer::class],
+            '--recursive' => true,
+        ])->assertExitCode(0);
+
+        $this->assertFileExists($this->generatedFactoryPath('CustomerFactory.php'));
+        $this->assertDirectoryDoesNotExist(getcwd() . '/database');
     }
 
     #[Test]
@@ -141,13 +162,76 @@ class GenerateFactoryCommandTest extends TestCase
         );
     }
 
+    #[Test]
+    public function it_generates_a_valid_iban_mapping(): void
+    {
+        $this->artisan('generate:factory', ['model' => [Customer::class]])
+            ->assertExitCode(0);
+
+        $contents = $this->factoryContents('CustomerFactory.php');
+
+        $this->assertStringContainsString("'iban' => fake()->iban()", $contents);
+        $this->assertStringNotContainsString('iban(, $nullable)', $contents);
+        $this->assertNotFalse(token_get_all($contents, TOKEN_PARSE));
+    }
+
+    #[Test]
+    public function it_detects_belongs_to_relations_without_invoking_parameterized_methods(): void
+    {
+        $this->artisan('generate:factory', ['model' => [Customer::class]])
+            ->assertExitCode(0);
+
+        $contents = file_get_contents($this->generatedFactoryPath('CustomerFactory.php'));
+
+        $this->assertStringContainsString(
+            "'country_id' => \\TheDoctor0\\LaravelFactoryGenerator\\Tests\\Fixtures\\Country::factory()",
+            $contents
+        );
+    }
+
+    #[Test]
+    public function it_maps_decimal_columns_even_when_precision_is_not_reported(): void
+    {
+        $this->assertSame(
+            'fake()->randomFloat(2, 0, 999999)',
+            $this->mapDecimalColumn('decimal')
+        );
+
+        $this->assertSame(
+            'fake()->randomFloat(2, 0, 9999)',
+            $this->mapDecimalColumn('decimal(6,2)')
+        );
+    }
+
+    protected function mapDecimalColumn(string $fullType): string
+    {
+        $command = $this->app->make(\TheDoctor0\LaravelFactoryGenerator\Console\GenerateFactoryCommand::class);
+
+        $setProperty = new \ReflectionMethod($command, 'setProperty');
+        $setProperty->invoke($command, new Customer(), 'price', 'decimal', [
+            'name' => 'price',
+            'type' => $fullType,
+            'type_name' => 'decimal',
+            'nullable' => false,
+        ], false);
+
+        $properties = new \ReflectionProperty($command, 'properties');
+
+        return $properties->getValue($command)['price'];
+    }
+
     protected function factoryContents(string $filename): string
+    {
+        return file_get_contents($this->generatedFactoryPath($filename));
+    }
+
+    protected function generatedFactoryPath(string $filename): string
     {
         $factory = collect(File::allFiles($this->app->databasePath('factories')))
             ->first(fn ($f) => str_ends_with($f->getFilename(), $filename));
 
         $this->assertNotNull($factory, "No $filename was generated");
 
-        return file_get_contents($factory->getPathname());
+        return $factory->getPathname();
     }
 }

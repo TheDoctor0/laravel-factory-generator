@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace TheDoctor0\LaravelFactoryGenerator\Console;
 
 use Exception;
-use SplFIleInfo;
+use SplFileInfo;
 use SplFileObject;
 use ReflectionClass;
 use ReflectionMethod;
 use Illuminate\Support\Str;
-use Doctrine\DBAL\Types\Type;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Contracts\View\Factory;
@@ -19,7 +18,6 @@ use Illuminate\Database\Eloquent\Model;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use TheDoctor0\LaravelFactoryGenerator\Types\EnumType;
 use TheDoctor0\LaravelFactoryGenerator\Database\EnumValues;
 
 class GenerateFactoryCommand extends Command
@@ -193,7 +191,7 @@ class GenerateFactoryCommand extends Command
             return [];
         }
 
-        return array_map(function (SplFIleInfo $file) use ($rootDirectory) {
+        return array_map(function (SplFileInfo $file) use ($rootDirectory) {
             return str_replace(
                 ['/', DIRECTORY_SEPARATOR, "$rootDirectory\\"],
                 ['\\', '\\', $this->laravel->getNamespace()],
@@ -263,6 +261,10 @@ class GenerateFactoryCommand extends Command
                 continue;
             }
 
+            if ($reflection->getNumberOfRequiredParameters() > 0) {
+                continue;
+            }
+
             /** @var \Illuminate\Database\Eloquent\Relations\BelongsTo $relationObject */
             $relationObject = $model->$method();
 
@@ -275,10 +277,13 @@ class GenerateFactoryCommand extends Command
     protected function setProperty(Model $model, string $field, string $type, array $column, bool $nullable = false): void
     {
         if ($type === 'decimal') {
+            $integerDigits = 8;
+            $decimalDigits = 2;
+
             $pattern = '/decimal\((?P<integer_digits>\d+),(?P<decimal_digits>\d+)\)/';
             if (preg_match($pattern, $column['type'], $matches)) {
-                $integerDigits = $matches['integer_digits'];
-                $decimalDigits = $matches['decimal_digits'];
+                $integerDigits = (int) $matches['integer_digits'];
+                $decimalDigits = (int) $matches['decimal_digits'];
             }
 
             $maxNumber = pow(10, $integerDigits - $decimalDigits) - 1;
@@ -398,7 +403,7 @@ class GenerateFactoryCommand extends Command
             'currency' => $this->fakerPrefix('currencyCode', $nullable),
             'guid' => $this->fakerPrefix('uuid', $nullable),
             'uuid' => $this->fakerPrefix('uuid', $nullable),
-            'iban' => $this->fakerPrefix('iban(, $nullable)', $nullable),
+            'iban' => $this->fakerPrefix('iban()', $nullable),
             'mac' => $this->fakerPrefix('macAddress', $nullable),
             'ip' => $this->fakerPrefix('ipv4', $nullable),
             'ipv4' => $this->fakerPrefix('ipv4', $nullable),
@@ -459,7 +464,7 @@ class GenerateFactoryCommand extends Command
 
     protected function generateRecursiveFileName(string $class): string
     {
-        return 'database/factories/' . implode('/', $this->getFileStructureDiff($class)) . 'Factory.php';
+        return database_path('factories/' . implode('/', $this->getFileStructureDiff($class)) . 'Factory.php');
     }
 
     protected function generateClassName(string $model): string
@@ -491,7 +496,7 @@ class GenerateFactoryCommand extends Command
 
         try {
             $reflection = new ReflectionClass($class);
-            $dir = 'database/factories' . str_replace('\\', '/', $this->generateAdditionalNameSpace($class));
+            $dir = database_path('factories' . str_replace('\\', '/', $this->generateAdditionalNameSpace($class)));
 
             if (! file_exists($dir) && $this->isInstantiableModelClass($reflection)) {
                 mkdir($dir, $permission, true);
