@@ -1,12 +1,13 @@
 # Laravel Factory Generator
 
+[![Tests](https://github.com/TheDoctor0/laravel-factory-generator/actions/workflows/tests.yml/badge.svg)](https://github.com/TheDoctor0/laravel-factory-generator/actions/workflows/tests.yml)
 [![Packagist](https://img.shields.io/packagist/v/TheDoctor0/laravel-factory-generator.svg)](https://packagist.org/packages/TheDoctor0/laravel-factory-generator)
 [![Packagist](https://img.shields.io/packagist/dt/TheDoctor0/laravel-factory-generator.svg)](https://packagist.org/packages/TheDoctor0/laravel-factory-generator)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/TheDoctor0/laravel-factory-generator/blob/master/LICENSE.md)
 
 [![Banner](https://banners.beyondco.de/Laravel%20Factory%20Generator.png?theme=light&packageManager=composer+require&packageName=thedoctor0%2Flaravel-factory-generator+--dev&pattern=architect&style=style_1&description=Automatically+generate+test+factories+for+all+your+models&md=1&showWatermark=1&fontSize=100px&images=https%3A%2F%2Flaravel.com%2Fimg%2Flogomark.min.svg)]()
 
-Automatically generate [factories](https://laravel.com/docs/master/database-testing#writing-factories) from your existing models.
+Automatically generate [class-based factories](https://laravel.com/docs/eloquent-factories) from your existing models.
 
 It will allow you to write tests containing your models much faster.
 
@@ -18,9 +19,13 @@ You can install the package via composer:
 composer require thedoctor0/laravel-factory-generator --dev
 ```
 
-For Laravel 8.x and 9.x check the [v1.3.2](https://github.com/TheDoctor0/laravel-factory-generator/tree/laravel-9).
+## Version support
 
-For Laravel 6.x and 7.x check the [v1.2.5](https://github.com/TheDoctor0/laravel-factory-generator/tree/laravel-7).
+| Package | Laravel | PHP |
+|---|---|---|
+| 2.x | 10.x - 13.x | 8.1+ |
+| [v1.3.2](https://github.com/TheDoctor0/laravel-factory-generator/tree/laravel-9) | 8.x - 9.x | 7.3+ |
+| [v1.2.5](https://github.com/TheDoctor0/laravel-factory-generator/tree/laravel-7) | 6.x - 7.x | 7.2+ |
 
 ## Usage
 
@@ -64,7 +69,8 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Models\Contact;
+use App\Models\User;
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -87,16 +93,18 @@ final class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => faker()->name,
-            'username' => faker()->userName,
-            'email' => faker()->safeEmail,
-            'password' => bcrypt(faker()->password),
-            'company_id' => \App\Company::factory(),
+            'name' => fake()->name,
+            'username' => fake()->userName,
+            'email' => fake()->safeEmail,
+            'password' => bcrypt(fake()->password),
+            'company_id' => \App\Models\Company::factory(),
             'remember_token' => Str::random(10),
         ];
     }
 }
 ```
+
+Nullable columns use `fake()->optional()`, related models resolve to their own `::factory()` calls, and the [customizable template](#customizing-the-factory-template) controls the final shape.
 
 ## Advanced usage
 
