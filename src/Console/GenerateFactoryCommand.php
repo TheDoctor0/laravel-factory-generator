@@ -10,7 +10,6 @@ use SplFileObject;
 use ReflectionClass;
 use ReflectionMethod;
 use Illuminate\Support\Str;
-use Doctrine\DBAL\Types\Type;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Contracts\View\Factory;
@@ -19,7 +18,6 @@ use Illuminate\Database\Eloquent\Model;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use TheDoctor0\LaravelFactoryGenerator\Types\EnumType;
 use TheDoctor0\LaravelFactoryGenerator\Database\EnumValues;
 
 class GenerateFactoryCommand extends Command
