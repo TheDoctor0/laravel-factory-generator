@@ -398,7 +398,7 @@ class GenerateFactoryCommand extends Command
             'currency' => $this->fakerPrefix('currencyCode', $nullable),
             'guid' => $this->fakerPrefix('uuid', $nullable),
             'uuid' => $this->fakerPrefix('uuid', $nullable),
-            'iban' => $this->fakerPrefix('iban(, $nullable)', $nullable),
+            'iban' => $this->fakerPrefix('iban()', $nullable),
             'mac' => $this->fakerPrefix('macAddress', $nullable),
             'ip' => $this->fakerPrefix('ipv4', $nullable),
             'ipv4' => $this->fakerPrefix('ipv4', $nullable),

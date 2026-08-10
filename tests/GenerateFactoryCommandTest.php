@@ -24,6 +24,7 @@ class GenerateFactoryCommandTest extends TestCase
             $table->string('name');
             $table->string('email')->unique();
             $table->string('city')->nullable();
+            $table->string('iban');
             $table->timestamps();
         });
 
@@ -139,6 +140,19 @@ class GenerateFactoryCommandTest extends TestCase
             'extends Factory',
             File::get($this->app->databasePath('factories/CustomerFactory.php'))
         );
+    }
+
+    #[Test]
+    public function it_generates_a_valid_iban_mapping(): void
+    {
+        $this->artisan('generate:factory', ['model' => [Customer::class]])
+            ->assertExitCode(0);
+
+        $contents = $this->factoryContents('CustomerFactory.php');
+
+        $this->assertStringContainsString("'iban' => fake()->iban()", $contents);
+        $this->assertStringNotContainsString('iban(, $nullable)', $contents);
+        $this->assertNotFalse(token_get_all($contents, TOKEN_PARSE));
     }
 
     protected function factoryContents(string $filename): string
