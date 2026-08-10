@@ -102,6 +102,8 @@ class GenerateFactoryCommand extends Command
                 continue;
             }
 
+            $this->files->ensureDirectoryExists(dirname($filename));
+
             if (! $this->files->put($filename, $content)) {
                 $this->error("Failed to save model factory: $filename");
             } else {

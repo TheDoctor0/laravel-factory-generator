@@ -1,20 +1,48 @@
-# Committed by Maintainer Dashboard for repos without CI. Runs the test suite
-# on every PR — upgrade PRs stay draft until this passes.
 name: Tests
 
 on:
-  pull_request:
   push:
-    branches: [main]
+    branches: [master]
+  pull_request:
 
 jobs:
   tests:
     runs-on: ubuntu-latest
+
+    timeout-minutes: 5
+
+    strategy:
+      fail-fast: true
+      matrix:
+        php: ['8.3', '8.4', '8.5']
+        laravel: ['11.*', '12.*', '13.*']
+        exclude:
+          # Laravel 11 supports PHP 8.2-8.4
+          - laravel: '11.*'
+            php: '8.5'
+        include:
+          - laravel: '11.*'
+            testbench: '9.*'
+          - laravel: '12.*'
+            testbench: '10.*'
+          - laravel: '13.*'
+            testbench: '11.*'
+
+    name: PHP ${{ matrix.php }} - Laravel ${{ matrix.laravel }}
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
+          php-version: ${{ matrix.php }}
           coverage: none
-      - run: composer install --no-interaction --prefer-dist
+
+      - run: |
+          # Laravel 11 is security-EOL; composer's advisory policy would refuse
+          # to resolve it — CI still exercises it deliberately.
+          composer config policy.advisories.block false
+          composer require "illuminate/support:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer update --prefer-dist --no-interaction
+
       - run: composer test
