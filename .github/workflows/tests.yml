@@ -14,18 +14,13 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        php: ['8.2', '8.3', '8.4']
-        laravel: ['10.*', '11.*', '12.*', '13.*']
+        php: ['8.3', '8.4', '8.5']
+        laravel: ['11.*', '12.*', '13.*']
         exclude:
-          # Laravel 13 requires PHP 8.3+
-          - laravel: '13.*'
-            php: '8.2'
-          # Laravel 10 supports PHP up to 8.3
-          - laravel: '10.*'
-            php: '8.4'
+          # Laravel 11 supports PHP 8.2-8.4
+          - laravel: '11.*'
+            php: '8.5'
         include:
-          - laravel: '10.*'
-            testbench: '8.*'
           - laravel: '11.*'
             testbench: '9.*'
           - laravel: '12.*'
@@ -44,6 +39,9 @@ jobs:
           coverage: none
 
       - run: |
+          # Laravel 11 is security-EOL; composer's advisory policy would refuse
+          # to resolve it — CI still exercises it deliberately.
+          composer config policy.advisories.block false
           composer require "illuminate/support:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
           composer update --prefer-dist --no-interaction
 
