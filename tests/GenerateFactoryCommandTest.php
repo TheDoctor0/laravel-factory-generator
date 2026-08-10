@@ -62,6 +62,20 @@ class GenerateFactoryCommandTest extends TestCase
         );
     }
 
+    #[Test]
+    public function it_prints_the_factory_without_writing_files_in_dry_run_mode(): void
+    {
+        $this->artisan('generate:factory', ['model' => [Customer::class], '--dry-run' => true])
+            ->expectsOutputToContain('Model factory preview:')
+            ->expectsOutputToContain('public function definition(): array')
+            ->assertExitCode(0);
+
+        $this->assertFalse(
+            File::isDirectory($this->app->databasePath('factories')),
+            'Dry run must not write any factory files'
+        );
+    }
+
     protected function factoryContents(string $filename): string
     {
         $factory = collect(File::allFiles($this->app->databasePath('factories')))
