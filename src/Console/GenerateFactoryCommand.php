@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace TheDoctor0\LaravelFactoryGenerator\Console;
 
 use Exception;
-use SplFIleInfo;
+use SplFileInfo;
 use SplFileObject;
 use ReflectionClass;
 use ReflectionMethod;
@@ -191,7 +191,7 @@ class GenerateFactoryCommand extends Command
             return [];
         }
 
-        return array_map(function (SplFIleInfo $file) use ($rootDirectory) {
+        return array_map(function (SplFileInfo $file) use ($rootDirectory) {
             return str_replace(
                 ['/', DIRECTORY_SEPARATOR, "$rootDirectory\\"],
                 ['\\', '\\', $this->laravel->getNamespace()],
